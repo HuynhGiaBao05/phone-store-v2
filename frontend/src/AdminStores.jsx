@@ -4,9 +4,12 @@ import "./AdminStores.css";
 
 function AdminStores() {
 
+  // ================= STATE =================
+
   const [stores, setStores] = useState([]);
   const [editingId, setEditingId] = useState(null);
 
+  // ⭐ FORM DATA
   const [form, setForm] = useState({
     name: "",
     address: "",
@@ -18,7 +21,7 @@ function AdminStores() {
   const token = localStorage.getItem("adminToken");
 
   // ==========================================
-  // LOAD STORE LIST
+  // ⭐ LOAD STORE LIST
   // ==========================================
   useEffect(() => {
     fetchStores();
@@ -41,14 +44,14 @@ function AdminStores() {
 
     } catch (err) {
 
-      console.log("Lỗi lấy stores:", err);
+      console.log("❌ Lỗi lấy stores:", err);
 
     }
 
   };
 
   // ==========================================
-  // CREATE / UPDATE STORE
+  // ⭐ CREATE / UPDATE STORE
   // ==========================================
   const handleSubmit = async () => {
 
@@ -59,6 +62,7 @@ function AdminStores() {
 
     try {
 
+      // ⭐ UPDATE
       if (editingId) {
 
         await axios.put(
@@ -71,7 +75,10 @@ function AdminStores() {
           }
         );
 
-      } else {
+      }
+
+      // ⭐ CREATE
+      else {
 
         await axios.post(
           "http://localhost:5000/api/stores",
@@ -85,6 +92,7 @@ function AdminStores() {
 
       }
 
+      // ⭐ RESET FORM
       setForm({
         name: "",
         address: "",
@@ -99,14 +107,14 @@ function AdminStores() {
 
     } catch (err) {
 
-      console.log("Lỗi lưu store:", err);
+      console.log("❌ Lỗi lưu store:", err);
 
     }
 
   };
 
   // ==========================================
-  // EDIT STORE
+  // ⭐ EDIT STORE
   // ==========================================
   const handleEdit = (store) => {
 
@@ -123,9 +131,11 @@ function AdminStores() {
   };
 
   // ==========================================
-  // DELETE / DISABLE STORE
+  // ⭐ DELETE STORE (SOFT DELETE)
   // ==========================================
   const handleDelete = async (id) => {
+
+    if (!window.confirm("Bạn có chắc muốn xóa chi nhánh?")) return;
 
     try {
 
@@ -142,7 +152,7 @@ function AdminStores() {
 
     } catch (err) {
 
-      console.log("Lỗi xóa store:", err);
+      console.log("❌ Lỗi xóa store:", err);
 
     }
 
@@ -154,7 +164,11 @@ function AdminStores() {
 
       <h2>Quản lý chi nhánh</h2>
 
-      {/* FORM */}
+
+      {/* ==========================================
+          ⭐ FORM ADD / EDIT STORE
+      ========================================== */}
+
       <div className="store-form">
 
         <input
@@ -197,28 +211,46 @@ function AdminStores() {
           }
         />
 
+        {/* ⭐ BUTTON ADD / UPDATE */}
         <button onClick={handleSubmit}>
-          {editingId ? "Cập nhật" : "Thêm chi nhánh"}
+          {editingId ? "Cập nhật chi nhánh" : "Thêm chi nhánh"}
         </button>
 
       </div>
 
-      {/* TABLE */}
+
+      {/* ==========================================
+          ⭐ STORE TABLE
+      ========================================== */}
+
       <table className="store-table">
 
         <thead>
+
           <tr>
+
             <th>Tên</th>
+
             <th>Địa chỉ</th>
+
             <th>Thành phố</th>
-            <th>Trạng thái</th>
+
+            {/* ⭐ THÊM CỘT DISTRICT */}
+            <th>Quận / Huyện</th>
+
+            {/* ⭐ THÊM CỘT PHONE */}
+            <th>SĐT</th>
+
             <th>Hành động</th>
+
           </tr>
+
         </thead>
+
 
         <tbody>
 
-          {stores.map((store) => (
+          {stores.map(store => (
 
             <tr key={store._id}>
 
@@ -228,21 +260,28 @@ function AdminStores() {
 
               <td>{store.city}</td>
 
-              <td>
-                {store.isActive ? "Hoạt động" : "Tắt"}
-              </td>
+              {/* ⭐ HIỂN THỊ DISTRICT */}
+              <td>{store.district}</td>
+
+              {/* ⭐ HIỂN THỊ PHONE */}
+              <td>{store.phone}</td>
 
               <td>
 
-                <button onClick={() => handleEdit(store)}>
+                {/* EDIT */}
+                <button
+                  className="btn-edit"
+                  onClick={() => handleEdit(store)}
+                >
                   Sửa
                 </button>
 
+                {/* DELETE */}
                 <button
-                  className="danger"
+                  className="btn-delete"
                   onClick={() => handleDelete(store._id)}
                 >
-                  Tắt
+                  Xóa
                 </button>
 
               </td>

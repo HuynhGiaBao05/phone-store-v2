@@ -4,16 +4,20 @@ import "./AdminProducts.css";
 
 function AdminProducts() {
 
+  // ================= STATE =================
+
   const [products, setProducts] = useState([]);
-  const [totalPages, setTotalPages] = useState(1);
   const [categories, setCategories] = useState([]);
-  const [brands, setBrands] = useState([]);
+  const [brands, setBrands] = useState([]); // ⭐ brand list
 
   const [selectedCategory, setSelectedCategory] = useState("all");
-  const [currentPage, setCurrentPage] = useState(1);
+  const [search, setSearch] = useState("");
+  const [sortPrice, setSortPrice] = useState("");
 
   const [showModal, setShowModal] = useState(false);
   const [editingProduct, setEditingProduct] = useState(null);
+
+  const [preview, setPreview] = useState(null);
 
   const [newProduct, setNewProduct] = useState({
     name: "",
@@ -31,63 +35,89 @@ function AdminProducts() {
   // ================= FETCH =================
 
   useEffect(() => {
-    fetchProducts(currentPage, selectedCategory);
-  }, [currentPage, selectedCategory]);
-
-  useEffect(() => {
+    fetchProducts();
     fetchCategories();
     fetchBrands();
   }, []);
 
-  const fetchProducts = async (page = 1, category = "all") => {
-    try {
+  const fetchProducts = async () => {
 
-      const res = await axios.get(
-        `http://localhost:5000/api/products?page=${page}&limit=5&category=${category}`
-      );
+    const res = await axios.get(
+      "http://localhost:5000/api/products"
+    );
 
-      setProducts(res.data.products);
-      setTotalPages(res.data.totalPages);
+    setProducts(res.data.products || res.data);
 
-    } catch (error) {
-      console.log(error);
-    }
   };
 
   const fetchCategories = async () => {
-    const res = await axios.get("http://localhost:5000/api/categories");
+
+    const res = await axios.get(
+      "http://localhost:5000/api/categories"
+    );
+
     setCategories(res.data);
+
   };
 
   const fetchBrands = async () => {
-    const res = await axios.get("http://localhost:5000/api/brands");
+
+    const res = await axios.get(
+      "http://localhost:5000/api/brands"
+    );
+
     setBrands(res.data);
+
   };
+
+  // ================= FILTER =================
+
+  let filteredProducts = [...products];
+
+  if (selectedCategory !== "all") {
+
+    filteredProducts = filteredProducts.filter(
+      (p) => p.category?._id === selectedCategory
+    );
+
+  }
+
+  filteredProducts = filteredProducts.filter((p) =>
+    p.name?.toLowerCase().includes(search.toLowerCase())
+  );
+
+  if (sortPrice === "asc") {
+
+    filteredProducts.sort(
+      (a, b) => (a.originalPrice || 0) - (b.originalPrice || 0)
+    );
+
+  }
+
+  if (sortPrice === "desc") {
+
+    filteredProducts.sort(
+      (a, b) => (b.originalPrice || 0) - (a.originalPrice || 0)
+    );
+
+  }
 
   // ================= DELETE =================
 
   const handleDelete = async (id) => {
 
-    if (!window.confirm("Bạn có chắc muốn xóa sản phẩm này?")) return;
+    if (!window.confirm("Bạn có chắc muốn xóa?")) return;
 
-    try {
-
-      await axios.delete(
-        `http://localhost:5000/api/products/${id}`,
-        {
-          headers: {
-            Authorization: `Bearer ${localStorage.getItem("adminToken")}`
-          }
+    await axios.delete(
+      `http://localhost:5000/api/products/${id}`,
+      {
+        headers: {
+          Authorization: `Bearer ${localStorage.getItem("adminToken")}`
         }
-      );
+      }
+    );
 
-      fetchProducts(currentPage, selectedCategory);
-
-    } catch (error) {
-
-      console.log("Lỗi xóa sản phẩm:", error);
-
-    }
+    fetchProducts();
 
   };
 
@@ -95,66 +125,59 @@ function AdminProducts() {
 
   const handleSave = async () => {
 
-    if (!newProduct.category || !newProduct.brand) {
-      alert("Vui lòng chọn category và brand");
-      return;
+    const formData = new FormData();
+
+    Object.keys(newProduct).forEach((key) => {
+      formData.append(key, newProduct[key]);
+    });
+
+    if (editingProduct) {
+
+      await axios.put(
+        `http://localhost:5000/api/products/${editingProduct._id}`,
+        formData,
+        {
+          headers: {
+            Authorization: `Bearer ${localStorage.getItem("adminToken")}`
+          }
+        }
+      );
+
+    } else {
+
+      await axios.post(
+        "http://localhost:5000/api/products/create",
+        formData,
+        {
+          headers: {
+            Authorization: `Bearer ${localStorage.getItem("adminToken")}`
+          }
+        }
+      );
+
     }
 
-    try {
+    setShowModal(false);
+    setEditingProduct(null);
 
-      const formData = new FormData();
+    fetchProducts();
 
-      formData.append("name", newProduct.name);
-      formData.append("category", newProduct.category);
-      formData.append("brand", newProduct.brand);
-      formData.append("originalPrice", newProduct.originalPrice);
-      formData.append("discount", newProduct.discount);
-      formData.append("stock", newProduct.stock);
-      formData.append("description", newProduct.description);
-      formData.append("promotion", newProduct.promotion);
-      formData.append("promoEndDate", newProduct.promoEndDate);
+  };
 
-      if (newProduct.image) {
-        formData.append("image", newProduct.image);
-      }
+  // ================= IMAGE PREVIEW =================
 
-      if (editingProduct) {
+  const handleImageChange = (e) => {
 
-        await axios.put(
-          `http://localhost:5000/api/products/${editingProduct._id}`,
-          formData,
-          {
-            headers: {
-              "Content-Type": "multipart/form-data",
-              Authorization: `Bearer ${localStorage.getItem("adminToken")}`
-            }
-          }
-        );
+    const file = e.target.files[0];
 
-      } else {
+    if (!file) return;
 
-        await axios.post(
-          "http://localhost:5000/api/products/create",
-          formData,
-          {
-            headers: {
-              "Content-Type": "multipart/form-data",
-              Authorization: `Bearer ${localStorage.getItem("adminToken")}`
-            }
-          }
-        );
+    setNewProduct({
+      ...newProduct,
+      image: file
+    });
 
-      }
-
-      setShowModal(false);
-      setEditingProduct(null);
-      fetchProducts(currentPage, selectedCategory);
-
-    } catch (error) {
-
-      console.log("Lỗi lưu sản phẩm:", error);
-
-    }
+    setPreview(URL.createObjectURL(file));
 
   };
 
@@ -162,46 +185,60 @@ function AdminProducts() {
 
     <div className="admin-products">
 
-      <div className="products-header">
+      <h2 className="page-title">Quản lý sản phẩm</h2>
 
-        <h2 className="page-title">Quản lý sản phẩm</h2>
+      {/* ================= FILTER BAR ================= */}
+
+      <div className="filter-bar">
+
+        <input
+          placeholder="🔍 Tìm sản phẩm..."
+          value={search}
+          onChange={(e)=>setSearch(e.target.value)}
+        />
+
+        <select
+          value={selectedCategory}
+          onChange={(e)=>setSelectedCategory(e.target.value)}
+        >
+
+          <option value="all">Tất cả</option>
+
+          {categories.map((c)=>(
+            <option key={c._id} value={c._id}>
+              {c.name}
+            </option>
+          ))}
+
+        </select>
+
+        <select
+          value={sortPrice}
+          onChange={(e)=>setSortPrice(e.target.value)}
+        >
+
+          <option value="">Sắp xếp giá</option>
+          <option value="asc">Giá tăng ↑</option>
+          <option value="desc">Giá giảm ↓</option>
+
+        </select>
 
         <button
           className="btn-primary"
-          onClick={() => {
-
-            setEditingProduct(null);
-
-            setNewProduct({
-              name: "",
-              category: "",
-              brand: "",
-              originalPrice: "",
-              discount: "",
-              stock: "",
-              description: "",
-              promotion: "",
-              promoEndDate: "",
-              image: null
-            });
-
-            setShowModal(true);
-
-          }}
+          onClick={()=>setShowModal(true)}
         >
           + Thêm sản phẩm
         </button>
 
       </div>
 
-      {/* TABLE */}
+      {/* ================= TABLE ================= */}
 
       <div className="table-card">
 
         <table className="product-table">
 
           <thead>
-
             <tr>
               <th>Ảnh</th>
               <th>Tên</th>
@@ -209,67 +246,81 @@ function AdminProducts() {
               <th>Tồn kho</th>
               <th>Hành động</th>
             </tr>
-
           </thead>
 
           <tbody>
 
-            {products.map((p) => (
+            {filteredProducts.map((p)=>{
 
-              <tr key={p._id}>
+              const finalPrice =
+                p.discount > 0
+                  ? p.price
+                  : p.originalPrice;
 
-                <td>
-                  <img src={p.image} alt={p.name} className="product-img" />
-                </td>
+              return(
 
-                <td>{p.name}</td>
+                <tr key={p._id}>
 
-                <td>
-                  {(p.discount > 0 ? p.price : p.originalPrice)?.toLocaleString()} ₫
-                </td>
+                  <td>
+                    <img
+                      src={p.image}
+                      className="product-img"
+                      alt=""
+                    />
+                  </td>
 
-                <td>{p.stock}</td>
+                  <td>{p.name}</td>
 
-                <td>
+                  <td>
 
-                  <button
-                    className="btn-edit"
-                    onClick={() => {
+                    {p.discount > 0 && (
+                      <span className="old-price">
+                        {p.originalPrice?.toLocaleString()} ₫
+                      </span>
+                    )}
 
-                      setEditingProduct(p);
+                    <span className="price">
+                      {finalPrice?.toLocaleString()} ₫
+                    </span>
 
-                      setNewProduct({
-                        name: p.name,
-                        category: p.category?._id,
-                        brand: p.brand?._id,
-                        originalPrice: p.originalPrice,
-                        discount: p.discount,
-                        stock: p.stock,
-                        description: p.description,
-                        promotion: p.promotion,
-                        promoEndDate: "",
-                        image: null
-                      });
+                    {p.discount > 0 && (
+                      <span className="discount">
+                        -{p.discount}%
+                      </span>
+                    )}
 
-                      setShowModal(true);
+                  </td>
 
-                    }}
-                  >
-                    Sửa
-                  </button>
+                  <td>{p.stock}</td>
 
-                  <button
-                    className="btn-delete"
-                    onClick={() => handleDelete(p._id)}
-                  >
-                    Xóa
-                  </button>
+                  <td className="actions">
 
-                </td>
+                    <button
+                      className="btn-edit"
+                      onClick={()=>{
 
-              </tr>
+                        setEditingProduct(p);
+                        setShowModal(true);
 
-            ))}
+                      }}
+                    >
+                      Sửa
+                    </button>
+
+                    <button
+                      className="btn-delete"
+                      onClick={()=>handleDelete(p._id)}
+                    >
+                      Xóa
+                    </button>
+
+                  </td>
+
+                </tr>
+
+              );
+
+            })}
 
           </tbody>
 
@@ -277,147 +328,167 @@ function AdminProducts() {
 
       </div>
 
-      {/* MODAL */}
+      {/* ================= MODAL ================= */}
 
-      {showModal && (
+{showModal && (
 
-        <div className="modal-overlay" onClick={() => setShowModal(false)}>
+  <div
+    className="modal-overlay"
+    onClick={()=>setShowModal(false)}
+  >
 
-          <div className="modal-content" onClick={(e) => e.stopPropagation()}>
+    <div
+      className="modal-content"
+      onClick={(e)=>e.stopPropagation()}
+    >
 
-            <h3>{editingProduct ? "Chỉnh sửa sản phẩm" : "Thêm sản phẩm"}</h3>
+      <h3>{editingProduct ? "Sửa sản phẩm" : "Thêm sản phẩm"}</h3>
 
-            <input
-              type="text"
-              placeholder="Tên sản phẩm"
-              value={newProduct.name}
-              onChange={(e) =>
-                setNewProduct({ ...newProduct, name: e.target.value })
-              }
-            />
+      {/* ⭐ GRID 2 CỘT */}
+      <div className="product-form-grid">
 
-            {/* CATEGORY */}
+        {/* LEFT */}
+        <div>
 
-            <select
-              value={newProduct.category}
-              onChange={(e) =>
-                setNewProduct({ ...newProduct, category: e.target.value })
-              }
-            >
-              <option value="">Chọn danh mục</option>
-              {categories.map((c) => (
-                <option key={c._id} value={c._id}>
-                  {c.name}
-                </option>
-              ))}
-            </select>
+          <input
+            placeholder="Tên sản phẩm"
+            value={newProduct.name}
+            onChange={(e)=>
+              setNewProduct({...newProduct,name:e.target.value})
+            }
+          />
 
-            {/* BRAND */}
+          <select
+            value={newProduct.category}
+            onChange={(e)=>
+              setNewProduct({...newProduct,category:e.target.value})
+            }
+          >
+            <option value="">Chọn danh mục</option>
 
-            <select
-              value={newProduct.brand}
-              onChange={(e) =>
-                setNewProduct({ ...newProduct, brand: e.target.value })
-              }
-            >
-              <option value="">Chọn thương hiệu</option>
-              {brands.map((b) => (
-                <option key={b._id} value={b._id}>
-                  {b.name}
-                </option>
-              ))}
-            </select>
+            {categories.map(c=>(
+              <option key={c._id} value={c._id}>
+                {c.name}
+              </option>
+            ))}
+          </select>
 
-            <input
-              type="number"
-              placeholder="Giá gốc"
-              value={newProduct.originalPrice}
-              onChange={(e) =>
-                setNewProduct({ ...newProduct, originalPrice: e.target.value })
-              }
-            />
+          <select
+            value={newProduct.brand}
+            onChange={(e)=>
+              setNewProduct({...newProduct,brand:e.target.value})
+            }
+          >
+            <option value="">Chọn thương hiệu</option>
 
-           <input
-  type="number"
-  placeholder="Giảm giá (%)"
-  value={newProduct.discount}
-  onChange={(e) =>
-    setNewProduct({
-      ...newProduct,
-      discount: e.target.value,
-      promoEndDate:
-        Number(e.target.value) > 0
-          ? newProduct.promoEndDate
-          : ""
-    })
-  }
-/>
+            {brands.map(b=>(
+              <option key={b._id} value={b._id}>
+                {b.name}
+              </option>
+            ))}
+          </select>
 
-            {Number(newProduct.discount) > 0 && (
-  <input
-    type="datetime-local"
-    value={newProduct.promoEndDate}
-    onChange={(e) =>
-      setNewProduct({
-        ...newProduct,
-        promoEndDate: e.target.value
-      })
-    }
-  />
-)}
-
-            <input
-              type="number"
-              placeholder="Tồn kho"
-              value={newProduct.stock}
-              onChange={(e) =>
-                setNewProduct({ ...newProduct, stock: e.target.value })
-              }
-            />
-
-            <textarea
-              placeholder="Mô tả"
-              value={newProduct.description}
-              onChange={(e) =>
-                setNewProduct({ ...newProduct, description: e.target.value })
-              }
-            />
-
-            <textarea
-              placeholder="Nội dung khuyến mãi"
-              value={newProduct.promotion}
-              onChange={(e) =>
-                setNewProduct({ ...newProduct, promotion: e.target.value })
-              }
-            />
-
-            <input
-              type="file"
-              onChange={(e) =>
-                setNewProduct({ ...newProduct, image: e.target.files[0] })
-              }
-            />
-
-            <div className="modal-actions">
-
-              <button onClick={handleSave} className="btn-primary">
-                Lưu
-              </button>
-
-              <button
-                onClick={() => setShowModal(false)}
-                className="btn-delete"
-              >
-                Hủy
-              </button>
-
-            </div>
-
-          </div>
+          <input
+            type="number"
+            placeholder="Giá gốc"
+            value={newProduct.originalPrice}
+            onChange={(e)=>
+              setNewProduct({...newProduct,originalPrice:e.target.value})
+            }
+          />
 
         </div>
 
-      )}
+        {/* RIGHT */}
+        <div>
+
+          <input
+            type="number"
+            placeholder="Giảm giá (%)"
+            value={newProduct.discount}
+            onChange={(e)=>
+              setNewProduct({...newProduct,discount:e.target.value})
+            }
+          />
+
+          {Number(newProduct.discount) > 0 && (
+
+            <input
+              type="datetime-local"
+              value={newProduct.promoEndDate}
+              onChange={(e)=>
+                setNewProduct({...newProduct,promoEndDate:e.target.value})
+              }
+            />
+
+          )}
+
+          <input
+            type="number"
+            placeholder="Tồn kho"
+            value={newProduct.stock}
+            onChange={(e)=>
+              setNewProduct({...newProduct,stock:e.target.value})
+            }
+          />
+
+          <input
+            type="file"
+            onChange={handleImageChange}
+          />
+
+          {preview && (
+            <img
+              src={preview}
+              className="preview-img"
+              alt=""
+            />
+          )}
+
+        </div>
+
+      </div>
+
+      {/* TEXTAREA */}
+      <textarea
+        placeholder="Mô tả sản phẩm"
+        value={newProduct.description}
+        onChange={(e)=>
+          setNewProduct({...newProduct,description:e.target.value})
+        }
+      />
+
+      <textarea
+        placeholder="Nội dung khuyến mãi"
+        value={newProduct.promotion}
+        onChange={(e)=>
+          setNewProduct({...newProduct,promotion:e.target.value})
+        }
+      />
+
+      <div className="modal-actions">
+
+        <button
+          className="btn-primary"
+          onClick={handleSave}
+        >
+          Lưu
+        </button>
+
+        <button
+          className="btn-delete"
+          onClick={()=>setShowModal(false)}
+        >
+          Hủy
+        </button>
+
+      </div>
+
+    </div>
+
+  </div>
+
+)}
 
     </div>
 

@@ -14,7 +14,8 @@ function AdminReport() {
 
   const token = localStorage.getItem("adminToken");
 
-  // ===== STATE =====
+  // ================= STATE =================
+
   const [stats, setStats] = useState({
     totalUsers: 0,
     totalProducts: 0,
@@ -24,9 +25,13 @@ function AdminReport() {
 
   const [monthlyRevenue, setMonthlyRevenue] = useState([]);
   const [monthlyOrders, setMonthlyOrders] = useState([]);
+
+  // ⭐ year filter
   const [year, setYear] = useState(new Date().getFullYear());
 
-  // ===== DOANH THU THEO THÁNG =====
+
+  // ================= REVENUE BY MONTH =================
+
   const fetchRevenueByMonth = async () => {
 
     try {
@@ -40,12 +45,14 @@ function AdminReport() {
         }
       );
 
+      // ⭐ tạo mảng 12 tháng mặc định
       const months = Array.from({ length: 12 }, (_, i) => ({
         month: `Tháng ${i + 1}`,
         revenue: 0
       }));
 
-      res.data.forEach(item => {
+      // ⭐ map dữ liệu từ backend
+      res.data?.forEach(item => {
 
         const monthIndex = Number(item._id) - 1;
 
@@ -59,13 +66,15 @@ function AdminReport() {
 
     } catch (err) {
 
-      console.log("Lỗi revenue:", err);
+      console.log("❌ Lỗi revenue:", err);
 
     }
 
   };
 
-  // ===== SỐ ĐƠN THEO THÁNG =====
+
+  // ================= ORDERS BY MONTH =================
+
   const fetchOrdersByMonth = async () => {
 
     try {
@@ -79,12 +88,13 @@ function AdminReport() {
         }
       );
 
+      // ⭐ tạo dữ liệu mặc định 12 tháng
       const months = Array.from({ length: 12 }, (_, i) => ({
         month: `Tháng ${i + 1}`,
         orders: 0
       }));
 
-      res.data.forEach(item => {
+      res.data?.forEach(item => {
 
         const monthIndex = Number(item._id) - 1;
 
@@ -98,13 +108,15 @@ function AdminReport() {
 
     } catch (err) {
 
-      console.log("Lỗi orders:", err);
+      console.log("❌ Lỗi orders:", err);
 
     }
 
   };
 
-  // ===== STATS =====
+
+  // ================= ADMIN STATS =================
+
   const fetchStats = async () => {
 
     try {
@@ -122,20 +134,24 @@ function AdminReport() {
 
     } catch (err) {
 
-      console.log("Lỗi lấy stats:", err);
+      console.log("❌ Lỗi lấy stats:", err);
 
     }
 
   };
 
-  // ===== LOAD DATA =====
+
+  // ================= LOAD DATA =================
+
   useEffect(() => {
 
     fetchStats();
     fetchRevenueByMonth();
     fetchOrdersByMonth();
 
-  }, [year]);
+  }, [year]); // ⭐ reload khi đổi năm
+
+
 
   return (
 
@@ -143,7 +159,9 @@ function AdminReport() {
 
       <h2 className="report-title">Báo cáo tổng quan</h2>
 
-      {/* YEAR FILTER */}
+
+      {/* ================= YEAR FILTER ================= */}
+
       <div style={{ marginBottom: "20px" }}>
 
         <div className="year-filter">
@@ -152,44 +170,73 @@ function AdminReport() {
 
           <select
             value={year}
-            onChange={(e) => setYear(e.target.value)}
+            onChange={(e) => setYear(Number(e.target.value))} // ⭐ convert number
             className="year-select"
           >
-            <option value="2024">2024</option>
-            <option value="2025">2025</option>
-            <option value="2026">2026</option>
+
+            <option value={2024}>2024</option>
+            <option value={2025}>2025</option>
+            <option value={2026}>2026</option>
+
           </select>
 
         </div>
 
       </div>
 
-      {/* CARDS */}
+
+
+      {/* ================= DASHBOARD CARDS ================= */}
+
       <div className="report-cards">
 
+        {/* TOTAL REVENUE */}
         <div className="report-card">
+
           <h4>Tổng doanh thu</h4>
-          <p>{stats.totalRevenue.toLocaleString()} ₫</p>
+
+          <p>
+            {stats.totalRevenue?.toLocaleString()} ₫
+          </p>
+
         </div>
 
+
+        {/* TOTAL ORDERS */}
         <div className="report-card">
+
           <h4>Tổng đơn hàng</h4>
+
           <p>{stats.totalOrders}</p>
+
         </div>
 
+
+        {/* TOTAL PRODUCTS */}
         <div className="report-card">
+
           <h4>Tổng sản phẩm</h4>
+
           <p>{stats.totalProducts}</p>
+
         </div>
 
+
+        {/* TOTAL USERS */}
         <div className="report-card">
+
           <h4>Khách hàng</h4>
+
           <p>{stats.totalUsers}</p>
+
         </div>
 
       </div>
 
-      {/* CHART REVENUE */}
+
+
+      {/* ================= REVENUE CHART ================= */}
+
       <div className="chart-card">
 
         <h3>📊 Doanh thu theo tháng (VNĐ)</h3>
@@ -199,8 +246,12 @@ function AdminReport() {
           <BarChart data={monthlyRevenue}>
 
             <XAxis dataKey="month" />
+
             <YAxis />
+
             <Tooltip />
+
+            {/* ⭐ chart revenue */}
             <Bar dataKey="revenue" fill="#3b82f6" />
 
           </BarChart>
@@ -209,7 +260,10 @@ function AdminReport() {
 
       </div>
 
-      {/* CHART ORDERS */}
+
+
+      {/* ================= ORDERS CHART ================= */}
+
       <div className="chart-card">
 
         <h3>📦 Số lượng đơn hàng theo tháng</h3>
@@ -219,8 +273,12 @@ function AdminReport() {
           <BarChart data={monthlyOrders}>
 
             <XAxis dataKey="month" />
+
             <YAxis />
+
             <Tooltip />
+
+            {/* ⭐ chart orders */}
             <Bar dataKey="orders" fill="#10b981" />
 
           </BarChart>

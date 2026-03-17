@@ -143,6 +143,12 @@
   color: #2563eb;
 }
 
+.old-price{
+  text-decoration: line-through;
+  color:#94a3b8;
+  margin-right:6px;
+}
+
 /* STOCK BADGE */
 .stock {
   padding: 6px 12px;
@@ -255,4 +261,123 @@
   background: #2563eb;
   color: white;
   border: none;
+}
+
+/* ================= CATEGORY FILTER DROPDOWN ================= */
+/* ⭐ NEW: dropdown lọc danh mục */
+
+.category-filter {
+  padding: 8px 14px;
+  border-radius: 8px;
+  border: 1px solid #e2e8f0;
+  font-size: 14px;
+  background: white;
+  cursor: pointer;
+  transition: 0.2s;
+}
+
+.category-filter:hover {
+  border-color: #2563eb;
+}
+
+.category-filter:focus {
+  outline: none;
+  border-color: #2563eb;
+  box-shadow: 0 0 0 2px rgba(37, 99, 235, 0.2);
+}
+
+
+/* ================= MODAL ================= */
+/* ⭐ NEW: modal đẹp hơn */
+
+.modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,0.35);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 999;
+}
+
+.modal-content {
+  width: 420px;
+  background: white;
+  padding: 25px;
+  border-radius: 14px;
+  box-shadow: 0 20px 50px rgba(0,0,0,0.2);
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+
+/* ⭐ NEW: input form trong modal */
+
+.modal-content input,
+.modal-content textarea,
+.modal-content select {
+  padding: 10px;
+  border-radius: 8px;
+  border: 1px solid #e2e8f0;
+  font-size: 14px;
+}
+
+.modal-content input:focus,
+.modal-content textarea:focus,
+.modal-content select:focus {
+  outline: none;
+  border-color: #2563eb;
+}
+
+.modal-content textarea {
+  resize: none;
+  min-height: 70px;
+}
+
+
+/* ⭐ NEW: modal buttons */
+
+.modal-actions {
+  margin-top: 10px;
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+}
+
+/* ⭐ FILTER BAR */
+
+.filter-bar{
+  display:flex;
+  gap:10px;
+  margin-bottom:20px;
+}
+
+.filter-bar input,
+.filter-bar select{
+  padding:8px 12px;
+  border-radius:8px;
+  border:1px solid #ddd;
+}
+
+/* ⭐ DISCOUNT BADGE */
+
+.discount{
+  background:#ef4444;
+  color:#ffffff !important;   /* ⭐ ép chữ trắng */
+  font-weight:700;            /* ⭐ chữ đậm */
+  padding:4px 10px;
+  border-radius:12px;
+  margin-left:10px;
+  font-size:12px;
+  display:inline-block;
+  line-height:1;
+}
+
+/* ⭐ PREVIEW IMAGE */
+
+.preview-img{
+  width:120px;
+  border-radius:10px;
+  margin-top:10px;
 }

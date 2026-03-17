@@ -1,31 +1,51 @@
-.return-page {
-  padding: 140px 20px;
-  background: #000;
-  min-height: 100vh;
+﻿.return-page {
+    padding: 140px 20px;
+    background: #f1f3f6;
+    min-height: 100vh;
 }
 
 .return-container {
-  max-width: 900px;
-  margin: auto;
+    max-width: 900px;
+    margin: auto;
+    background: #ffffff;
+    padding: 40px;
+    border-radius: 20px;
+    box-shadow: 0 8px 25px rgba(0, 0, 0, 0.06);
 }
 
-.return-container h1 {
-  font-size: 36px;
-  margin-bottom: 40px;
-}
+    /* ===== TITLE ===== */
+    .return-container h1 {
+        font-size: 36px;
+        margin-bottom: 30px;
+        color: #111; /* đậm hơn nữa */
+        text-align: center;
+        font-weight: 800; /* tăng đậm */
+    }
 
-.return-container h3 {
-  margin-top: 30px;
-  margin-bottom: 10px;
-  color: #ff3c3c;
-}
+    /* ===== SECTION TITLE ===== */
+    .return-container h3 {
+        margin-top: 30px;
+        margin-bottom: 10px;
+        color: #222; /* đậm hơn */
+        font-weight: 700;
+    }
 
-.return-container p,
-.return-container li {
-  color: #aaa;
-  line-height: 1.7;
-}
+    /* ===== TEXT ===== */
+    .return-container p,
+    .return-container li {
+        color: #222; /* đậm hơn */
+        line-height: 1.7;
+        font-size: 15px;
+        font-weight: 600; /* tăng độ đậm */
+    }
 
-.return-container ul {
-  padding-left: 20px;
-}
+    /* ===== LIST ===== */
+    .return-container ul {
+        padding-left: 20px;
+    }
+
+    /* ===== HOVER EFFECT ===== */
+    .return-container li:hover {
+        color: #000;
+        transition: 0.3s;
+    }

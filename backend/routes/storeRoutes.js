@@ -5,48 +5,79 @@ const { protect, authorizeRoles } = require("../middleware/authMiddleware");
 
 
 // ==========================================
-// 🔥 ADMIN - TẠO CHI NHÁNH
+// ⭐ ADMIN - TẠO CHI NHÁNH
 // ==========================================
 router.post(
   "/",
   protect,
   authorizeRoles("ADMIN"),
   async (req, res) => {
+
     try {
+
       const store = await Store.create(req.body);
+
       res.json(store);
+
     } catch (err) {
+
       res.status(500).json({ message: err.message });
+
     }
+
   }
 );
 
 
 // ==========================================
-// 🔥 ADMIN - LẤY TẤT CẢ
+// ⭐ ADMIN - LẤY STORE (CHỈ ACTIVE)
 // ==========================================
 router.get(
   "/admin",
   protect,
   authorizeRoles("ADMIN"),
   async (req, res) => {
-    const stores = await Store.find().sort({ createdAt: -1 });
-    res.json(stores);
+
+    try {
+
+      // ⭐ chỉ lấy store chưa bị xóa
+      const stores = await Store.find({ isActive: true })
+        .sort({ createdAt: -1 });
+
+      res.json(stores);
+
+    } catch (err) {
+
+      res.status(500).json({ message: err.message });
+
+    }
+
   }
 );
 
 
 // ==========================================
-// 🔥 PUBLIC - LẤY STORE ACTIVE
+// ⭐ PUBLIC - STORE ACTIVE
 // ==========================================
 router.get("/", async (req, res) => {
-  const stores = await Store.find({ isActive: true });
-  res.json(stores);
+
+  try {
+
+    const stores = await Store.find({ isActive: true });
+
+    res.json(stores);
+
+  } catch (err) {
+
+    res.status(500).json({ message: err.message });
+
+  }
+
 });
 
 
 // ==========================================
-// 🔥 ADMIN - UPDATE
+// ⭐ ADMIN - UPDATE STORE
 // ==========================================
 router.put(
   "/:id",
@@ -54,22 +85,35 @@ router.put(
   authorizeRoles("ADMIN"),
   async (req, res) => {
 
-    const store = await Store.findById(req.params.id);
+    try {
 
-    if (!store)
-      return res.status(404).json({ message: "Store not found" });
+      const store = await Store.findById(req.params.id);
 
-    Object.assign(store, req.body);
+      if (!store) {
+        return res.status(404).json({
+          message: "Store not found"
+        });
+      }
 
-    await store.save();
+      // ⭐ cập nhật dữ liệu
+      Object.assign(store, req.body);
 
-    res.json(store);
+      await store.save();
+
+      res.json(store);
+
+    } catch (err) {
+
+      res.status(500).json({ message: err.message });
+
+    }
+
   }
 );
 
 
 // ==========================================
-// 🔥 ADMIN - SOFT DELETE
+// ⭐ ADMIN - DELETE STORE (SOFT DELETE)
 // ==========================================
 router.delete(
   "/:id",
@@ -77,16 +121,33 @@ router.delete(
   authorizeRoles("ADMIN"),
   async (req, res) => {
 
-    const store = await Store.findById(req.params.id);
+    try {
 
-    if (!store)
-      return res.status(404).json({ message: "Store not found" });
+      const store = await Store.findById(req.params.id);
 
-    store.isActive = false; // không xoá cứng
-    await store.save();
+      if (!store) {
+        return res.status(404).json({
+          message: "Store not found"
+        });
+      }
 
-    res.json({ message: "Store disabled" });
+      // ⭐ soft delete
+      store.isActive = false;
+
+      await store.save();
+
+      res.json({
+        message: "Store deleted successfully"
+      });
+
+    } catch (err) {
+
+      res.status(500).json({ message: err.message });
+
+    }
+
   }
 );
+
 
 module.exports = router;
