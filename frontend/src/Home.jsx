@@ -59,7 +59,7 @@ function Home() {
           modules={[Navigation, Pagination, Autoplay]}
           navigation
           pagination={{ clickable: true }}
-          autoplay={{ delay: 4000 }}
+          autoplay={{ delay: 1500 }}
           loop
         >
           {heroSlides.map((img, index) => (

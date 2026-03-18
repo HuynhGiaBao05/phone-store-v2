@@ -5,6 +5,9 @@ const path = require("path"); // ✅ THÊM DÒNG NÀY
 require("dotenv").config();
 
 const app = express();
+const helmet = require("helmet");
+app.use(helmet());
+
 
 // =====================================================
 // 🔥 ENV CONFIG

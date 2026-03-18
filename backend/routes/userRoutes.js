@@ -4,32 +4,57 @@ const bcrypt = require("bcryptjs");
 const jwt = require("jsonwebtoken");
 const User = require("../models/User");
 const sendEmail = require("../utils/sendEmail");
+const xss = require("xss"); // 🛡️ XSS: sanitize input
 
 // CREATE USER
 const { protect, authorizeRoles } = require("../middleware/authMiddleware");
+
+// ⭐ PASSWORD VALIDATION
+const validatePassword = (password) => {
+  return /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[\W_]).{8,}$/.test(password);
+};
 
 router.post(
   "/create",
   protect,
   authorizeRoles("ADMIN"),
   async (req, res) => {  try {
-    const { fullName, email, password, role } = req.body;
+    let { fullName, email, password, role } = req.body;
 
-    const existingUser = await User.findOne({ email });
+// 🛡️ XSS: sanitize input
+fullName = xss(fullName);
+email = xss(email);
+  if (!fullName) {
+  return res.status(400).json({ message: "Full name is required" });
+}
+      if (!email) {
+  return res.status(400).json({ message: "Email is required" });
+}
+      const cleanEmail = email.trim().toLowerCase();
+    const existingUser = await User.findOne({ email: cleanEmail });
+
     if (existingUser) {
-      return res.status(400).json({ message: "Email already exists" });
-    }
+  return res.status(400).json({ message: "Email already exists" });
+}
 
-    const hashedPassword = await bcrypt.hash(password, 10);
+    if (!password || !validatePassword(password)) {
+  return res.status(400).json({
+    message: "Mật khẩu phải >=8 ký tự, gồm chữ hoa, chữ thường, số và ký tự đặc biệt"
+  });
+}
+
+const hashedPassword = await bcrypt.hash(password, 10);
 
     const user = new User({
       fullName,
-      email,
+      email: cleanEmail,
       password: hashedPassword,
       role: role || "USER",
       isVerified: true,
       isActive: true
     });
+
+
 
     await user.save();
 
@@ -44,9 +69,19 @@ router.post(
 // ===============================
 router.post("/login", async (req, res) => {
   try {
-    const { email, password } = req.body;
- 
-    const user = await User.findOne({ email });
+    let { email, password } = req.body;
+
+// 🛡️ XSS: sanitize input
+email = xss(email);
+    if (!email) {
+  return res.status(400).json({ message: "Email is required" });
+}
+if (!password) {
+  return res.status(400).json({ message: "Password is required" });
+}
+    const cleanEmail = email.trim().toLowerCase();
+    const user = await User.findOne({ email: cleanEmail });
+
 
 if (!user) {
   return res.status(400).json({ message: "Invalid email or password" });
@@ -118,13 +153,20 @@ if (user.role === "USER" && !user.isVerified) {
 router.post("/forgot-password", async (req, res) => {
   try {
     const { email, newPassword } = req.body;
+    if (!email) {
+  return res.status(400).json({ message: "Email is required" });
+}
+    const cleanEmail = email.trim().toLowerCase();
+    const user = await User.findOne({ email: cleanEmail });
 
-    const user = await User.findOne({ email });
     if (!user) {
       return res.status(404).json({ message: "Email not found" });
     }
 
-    const bcrypt = require("bcryptjs");
+    
+    if (!newPassword || !validatePassword(newPassword)) {
+  return res.status(400).json({ message: "Mật khẩu yếu" });
+}
     const hashedPassword = await bcrypt.hash(newPassword, 10);
 
     user.password = hashedPassword;
@@ -142,9 +184,16 @@ router.post("/forgot-password", async (req, res) => {
 // ===============================
 router.post("/send-reset-otp", async (req, res) => {
   try {
-    const { email } = req.body;
+    let { email } = req.body;
 
-    const user = await User.findOne({ email });
+// 🛡️ XSS: sanitize input
+email = xss(email);
+    if (!email) {
+  return res.status(400).json({ message: "Email is required" });
+}
+    const cleanEmail = email.trim().toLowerCase();
+        const user = await User.findOne({ email: cleanEmail });
+
 
     if (!user) {
       return res.status(400).json({ message: "Email not found" });
@@ -158,7 +207,7 @@ router.post("/send-reset-otp", async (req, res) => {
     await user.save();
 
     await sendEmail(
-      email,
+      cleanEmail,
       "Reset Password OTP",
       `Your password reset OTP is: ${otp}`
     );
@@ -176,8 +225,12 @@ router.post("/send-reset-otp", async (req, res) => {
 router.post("/reset-password", async (req, res) => {
   try {
     const { email, otp, newPassword } = req.body;
+    if (!email) {
+  return res.status(400).json({ message: "Email is required" });
+}
+    const cleanEmail = email.trim().toLowerCase();
+    const user = await User.findOne({ email: cleanEmail });
 
-    const user = await User.findOne({ email });
 
     if (!user) {
       return res.status(400).json({ message: "User not found" });
@@ -190,7 +243,9 @@ router.post("/reset-password", async (req, res) => {
     if (user.otpExpire < Date.now()) {
       return res.status(400).json({ message: "OTP expired" });
     }
-
+if (!newPassword || !validatePassword(newPassword)) {
+  return res.status(400).json({ message: "Mật khẩu yếu" });
+}
     const hashedPassword = await bcrypt.hash(newPassword, 10);
 
     user.password = hashedPassword;
@@ -216,31 +271,48 @@ router.get("/profile", protect, (req, res) => {
 // ===============================
 router.post("/register", async (req, res) => {
   try {
-    const { fullName, email, password } = req.body;
+        let { fullName, email, password } = req.body;
 
-    const existingUser = await User.findOne({ email });
-    if (existingUser) {
-      return res.status(400).json({ message: "Email already exists" });
-    }
+// 🛡️ XSS: sanitize input
+fullName = xss(fullName);
+email = xss(email);        if (!fullName) {
+  return res.status(400).json({ message: "Full name is required" });
+}
+        if (!email) {
+  return res.status(400).json({ message: "Email is required" });
+}
+    const cleanEmail = email.trim().toLowerCase();
 
-    const hashedPassword = await bcrypt.hash(password, 10);
+const existingUser = await User.findOne({ email: cleanEmail });
+
+if (existingUser) {
+  return res.status(400).json({ message: "Email already exists" });
+}
+
+   if (!password || !validatePassword(password)) {
+  return res.status(400).json({
+    message: "Mật khẩu phải >=8 ký tự, gồm chữ hoa, chữ thường, số và ký tự đặc biệt"
+  });
+}
+
+const hashedPassword = await bcrypt.hash(password, 10);
 
     const otp = Math.floor(100000 + Math.random() * 900000).toString();
 
     const user = new User({
-      fullName,
-      email,
-      password: hashedPassword,
-      otpCode: otp,
-      otpExpire: Date.now() + 5 * 60 * 1000,
-      isVerified: false
+     fullName,
+  email: cleanEmail,
+  password: hashedPassword,
+  otpCode: otp,
+  otpExpire: Date.now() + 5 * 60 * 1000,
+  isVerified: false
     });
 
     await user.save();
 
     // ✅ BẬT LẠI GỬI EMAIL
     await sendEmail(
-      email,
+      cleanEmail,
       "OTP Verification",
       `Your OTP code is: ${otp}`
     );
@@ -261,8 +333,12 @@ router.post("/register", async (req, res) => {
 router.post("/verify-otp", async (req, res) => {
   try {
     const { email, otp } = req.body;
+    if (!email) {
+  return res.status(400).json({ message: "Email is required" });
+}
+    const cleanEmail = email.trim().toLowerCase();
+    const user = await User.findOne({ email: cleanEmail });
 
-    const user = await User.findOne({ email });
 
     if (!user) {
       return res.status(400).json({ message: "User not found" });
@@ -300,9 +376,16 @@ router.post("/verify-otp", async (req, res) => {
 // ===============================
 router.post("/resend-otp", async (req, res) => {
   try {
-    const { email } = req.body;
+    let { email } = req.body;
 
-    const user = await User.findOne({ email });
+// 🛡️ XSS: sanitize input
+email = xss(email);
+    if (!email) {
+  return res.status(400).json({ message: "Email is required" });
+}
+    const cleanEmail = email.trim().toLowerCase();
+    const user = await User.findOne({ email: cleanEmail });
+
 
     if (!user) {
       return res.status(400).json({ message: "User not found" });
@@ -321,7 +404,7 @@ router.post("/resend-otp", async (req, res) => {
     await user.save();
 
     await sendEmail(
-      email,
+      cleanEmail,
       "Resend OTP Verification",
       `Your new OTP code is: ${newOtp}`
     );

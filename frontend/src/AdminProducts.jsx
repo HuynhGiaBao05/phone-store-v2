@@ -125,11 +125,38 @@ function AdminProducts() {
 
   const handleSave = async () => {
 
+  try {
+
     const formData = new FormData();
 
-    Object.keys(newProduct).forEach((key) => {
-      formData.append(key, newProduct[key]);
-    });
+    // ⭐ REQUIRED
+    formData.append("name", newProduct.name);
+    formData.append("category", newProduct.category);
+    formData.append("brand", newProduct.brand);
+
+    // ⭐ FIX NUMBER
+    formData.append("originalPrice", Number(newProduct.originalPrice));
+    formData.append("discount", Number(newProduct.discount || 0));
+    formData.append("stock", Number(newProduct.stock || 0));
+
+    // ⭐ OPTIONAL
+    formData.append("description", newProduct.description || "");
+    formData.append("promotion", newProduct.promotion || "");
+
+    // ⭐ CHỈ GỬI KHI CÓ
+    if (newProduct.promoEndDate) {
+      formData.append("promoEndDate", newProduct.promoEndDate);
+    }
+
+    // ⭐ IMAGE
+    if (newProduct.image instanceof File) {
+      formData.append("image", newProduct.image);
+    }
+
+    // ⭐ DEBUG
+    for (let pair of formData.entries()) {
+      console.log(pair[0], pair[1]);
+    }
 
     if (editingProduct) {
 
@@ -159,10 +186,16 @@ function AdminProducts() {
 
     setShowModal(false);
     setEditingProduct(null);
-
+    
     fetchProducts();
+;
+  } catch (error) {
 
-  };
+    console.log("🔥 ERROR:", error.response?.data || error);
+
+  }
+
+};
 
   // ================= IMAGE PREVIEW =================
 

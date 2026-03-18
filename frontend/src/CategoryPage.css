@@ -97,6 +97,13 @@
 /* ===== PRICE BOX ===== */
 .price-box {
     margin-top: 8px;
+
+    display: flex;
+    flex-direction: column;      /* ⭐ FIX CHÍNH */
+    align-items: center;         /* ⭐ căn giữa */
+    gap: 4px;
+
+    min-height: 40px;    
 }
 
 .new-price {
