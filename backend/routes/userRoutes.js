@@ -13,6 +13,10 @@ const { protect, authorizeRoles } = require("../middleware/authMiddleware");
 const validatePassword = (password) => {
   return /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[\W_]).{8,}$/.test(password);
 };
+// 🛡️ EMAIL VALIDATION
+const validateEmail = (email) => {
+  return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
+};
 
 router.post(
   "/create",
@@ -21,14 +25,33 @@ router.post(
   async (req, res) => {  try {
     let { fullName, email, password, role } = req.body;
 
+// 🛡️ SQL INJECTION: ép kiểu
+fullName = String(fullName);
+email = String(email);
+password = String(password);
+role = role ? String(role).toUpperCase() : "USER";
+
+// 🛡️ ROLE VALIDATION 
+const allowedRoles = ["USER", "ADMIN"];
+if (!allowedRoles.includes(role)) {
+  return res.status(400).json({ message: "Invalid role" });
+}
+
 // 🛡️ XSS: sanitize input
 fullName = xss(fullName);
 email = xss(email);
-  if (!fullName) {
+
+// 🛡️ check email format
+if (!fullName) {
   return res.status(400).json({ message: "Full name is required" });
 }
-      if (!email) {
+
+if (!email) {
   return res.status(400).json({ message: "Email is required" });
+}
+
+if (!validateEmail(email)) {
+  return res.status(400).json({ message: "Email không hợp lệ" });
 }
       const cleanEmail = email.trim().toLowerCase();
     const existingUser = await User.findOne({ email: cleanEmail });
@@ -65,46 +88,47 @@ const hashedPassword = await bcrypt.hash(password, 10);
 });
 
 // ===============================
-// LOGINB
+// LOGIN
 // ===============================
 router.post("/login", async (req, res) => {
   try {
     let { email, password } = req.body;
 
-// 🛡️ XSS: sanitize input
-email = xss(email);
-    if (!email) {
-  return res.status(400).json({ message: "Email is required" });
+    
+
+    // 🛡️ USE XSS: sanitize input
+    email = xss(String(email));
+    // 🛡️ USE SQL INJECTION: ép kiểu tránh object injection
+password = String(password);
+    // 🛡️ CHECK EMAIL FORMAT
+if (!email || !password) {
+  return res.status(400).json({ message: "Missing credentials" });
 }
-if (!password) {
-  return res.status(400).json({ message: "Password is required" });
+
+if (!validateEmail(email)) {
+  return res.status(400).json({ message: "Email không hợp lệ" });
 }
+
     const cleanEmail = email.trim().toLowerCase();
     const user = await User.findOne({ email: cleanEmail });
 
+    if (!user) {
+      return res.status(400).json({ message: "Invalid email or password" });
+    }
 
-if (!user) {
-  return res.status(400).json({ message: "Invalid email or password" });
-}
+    // 🛡️ USE ACCOUNT STATUS
+    if (!user.isActive) {
+      return res.status(403).json({ message: "Account locked" });
+    }
 
-if (!user.isActive) {
-  return res.status(403).json({
-    message: "Tài khoản đã bị khóa"
-  });
-}
+    // 🛡️ USE VERIFY CHECK
+    if (user.role === "USER" && !user.isVerified) {
+      return res.status(403).json({ message: "Please verify account" });
+    }
 
-    // Chỉ USER mới cần verify
-if (user.role === "USER" && !user.isVerified) {
-  return res.status(403).json({
-    message: "Please verify your account first"
-  });
-
-}
-    // 🔒 CHECK IF ACCOUNT LOCKED
+    // 🛡️ USE BRUTE FORCE PROTECTION
     if (user.lockUntil && user.lockUntil > Date.now()) {
-      return res.status(403).json({
-        message: "Account locked. Try again later."
-      });
+      return res.status(403).json({ message: "Try again later" });
     }
 
     const isMatch = await bcrypt.compare(password, user.password);
@@ -120,9 +144,7 @@ if (user.role === "USER" && !user.isVerified) {
 
       await user.save();
 
-      return res.status(400).json({
-        message: "Invalid email or password"
-      });
+      return res.status(400).json({ message: "Invalid email or password" });
     }
 
     // ✅ LOGIN SUCCESS
@@ -130,6 +152,30 @@ if (user.role === "USER" && !user.isVerified) {
     user.lockUntil = undefined;
     await user.save();
 
+    // 🛡️ USE MFA (EMAIL ALERT - kiểu Google)
+    const ip =
+      (req.headers["x-forwarded-for"] || "")
+        .split(",")[0]
+        .trim() || req.socket.remoteAddress;
+
+    await sendEmail(
+      user.email,
+      "Cảnh báo đăng nhập",
+      `
+      <h3>🔐 Cảnh báo đăng nhập</h3>
+      <p>Tài khoản của bạn vừa đăng nhập:</p>
+
+      <ul>
+        <li><b>Thời gian:</b> ${new Date().toLocaleString()}</li>
+        <li><b>IP:</b> ${ip}</li>
+        <li><b>Thiết bị:</b> ${req.headers["user-agent"]}</li>
+      </ul>
+
+      <p style="color:red;">Nếu không phải bạn, hãy đổi mật khẩu ngay!</p>
+      `
+    );
+
+    // 🛡️ USE JWT
     const token = jwt.sign(
       { id: user._id, role: user.role },
       process.env.JWT_SECRET,
@@ -147,37 +193,9 @@ if (user.role === "USER" && !user.isVerified) {
   }
 });
 
-// ===============================
-// FORGOT PASSWORD
-// ===============================
-router.post("/forgot-password", async (req, res) => {
-  try {
-    const { email, newPassword } = req.body;
-    if (!email) {
-  return res.status(400).json({ message: "Email is required" });
-}
-    const cleanEmail = email.trim().toLowerCase();
-    const user = await User.findOne({ email: cleanEmail });
 
-    if (!user) {
-      return res.status(404).json({ message: "Email not found" });
-    }
 
-    
-    if (!newPassword || !validatePassword(newPassword)) {
-  return res.status(400).json({ message: "Mật khẩu yếu" });
-}
-    const hashedPassword = await bcrypt.hash(newPassword, 10);
 
-    user.password = hashedPassword;
-    await user.save();
-
-    res.json({ message: "Password updated successfully" });
-
-  } catch (error) {
-    res.status(500).json({ error: error.message });
-  }
-});
 
 // ===============================
 // SEND RESET PASSWORD OTP
@@ -186,18 +204,33 @@ router.post("/send-reset-otp", async (req, res) => {
   try {
     let { email } = req.body;
 
+  // 🛡️ SQL INJECTION
+email = String(email);
+
 // 🛡️ XSS: sanitize input
 email = xss(email);
-    if (!email) {
+
+// 🛡️ CHECK EMAIL FORMAT
+if (!email) {
   return res.status(400).json({ message: "Email is required" });
 }
-    const cleanEmail = email.trim().toLowerCase();
-        const user = await User.findOne({ email: cleanEmail });
+if (!validateEmail(email)) {
+  return res.status(400).json({ message: "Email không hợp lệ" });
+}
+// ✅ FIX: chống spam gửi OTP liên tục
+const cleanEmail = email.trim().toLowerCase();
+const user = await User.findOne({ email: cleanEmail });
+
+if (!user) {
+  return res.status(400).json({ message: "Email not found" });
+}
+
+if (user.otpExpire && user.otpExpire > Date.now()) {
+  return res.status(429).json({ message: "OTP vừa gửi, thử lại sau" });
+}
 
 
-    if (!user) {
-      return res.status(400).json({ message: "Email not found" });
-    }
+    
 
     const otp = Math.floor(100000 + Math.random() * 900000).toString();
 
@@ -224,9 +257,24 @@ email = xss(email);
 // ===============================
 router.post("/reset-password", async (req, res) => {
   try {
-    const { email, otp, newPassword } = req.body;
-    if (!email) {
+    let { email, otp, newPassword } = req.body;
+
+// 🛡️ SQL INJECTION
+email = String(email);
+otp = String(otp);
+newPassword = String(newPassword);
+
+//🛡️ XSS: sanitize input
+email = xss(String(email));
+
+// 🛡️  CHECK EMAIL FORMAT
+if (!email) {
   return res.status(400).json({ message: "Email is required" });
+}
+
+
+if (!validateEmail(email)) {
+  return res.status(400).json({ message: "Email không hợp lệ" });
 }
     const cleanEmail = email.trim().toLowerCase();
     const user = await User.findOne({ email: cleanEmail });
@@ -273,13 +321,25 @@ router.post("/register", async (req, res) => {
   try {
         let { fullName, email, password } = req.body;
 
+// 🛡️ SQL INJECTION: ép kiểu để tránh object injection
+fullName = String(fullName);
+email = String(email);
+password = String(password);
 // 🛡️ XSS: sanitize input
 fullName = xss(fullName);
-email = xss(email);        if (!fullName) {
+email = xss(email);      
+
+// 🛡️ CHECK EMAIL FORMAT
+if (!fullName) {
   return res.status(400).json({ message: "Full name is required" });
 }
-        if (!email) {
+
+if (!email) {
   return res.status(400).json({ message: "Email is required" });
+}
+
+if (!validateEmail(email)) {
+  return res.status(400).json({ message: "Email không hợp lệ" });
 }
     const cleanEmail = email.trim().toLowerCase();
 
@@ -332,9 +392,20 @@ const hashedPassword = await bcrypt.hash(password, 10);
 // ===============================
 router.post("/verify-otp", async (req, res) => {
   try {
-    const { email, otp } = req.body;
-    if (!email) {
+    let { email, otp } = req.body;
+
+    // 🛡️ SQL INJECTION
+    email = String(email);
+    otp = String(otp);
+    //XSS: sanitize input
+    email = xss(String(email));
+    // 🛡️  CHECK EMAIL FORMAT
+if (!email) {
   return res.status(400).json({ message: "Email is required" });
+}
+
+if (!validateEmail(email)) {
+  return res.status(400).json({ message: "Email không hợp lệ" });
 }
     const cleanEmail = email.trim().toLowerCase();
     const user = await User.findOne({ email: cleanEmail });
@@ -378,18 +449,36 @@ router.post("/resend-otp", async (req, res) => {
   try {
     let { email } = req.body;
 
+  // 🛡️ SQL INJECTION
+email = String(email);
+
 // 🛡️ XSS: sanitize input
-email = xss(email);
-    if (!email) {
+email = xss(String(email));
+
+
+// 🛡️ CHECK EMAIL FORMAT
+if (!email) {
   return res.status(400).json({ message: "Email is required" });
 }
-    const cleanEmail = email.trim().toLowerCase();
-    const user = await User.findOne({ email: cleanEmail });
+
+if (!validateEmail(email)) {
+  return res.status(400).json({ message: "Email không hợp lệ" });
+}
+
+const cleanEmail = email.trim().toLowerCase();
+const user = await User.findOne({ email: cleanEmail });
+
+if (!user) {
+  return res.status(400).json({ message: "User not found" });
+}
 
 
-    if (!user) {
-      return res.status(400).json({ message: "User not found" });
-    }
+if (user.otpExpire && user.otpExpire > Date.now()) {
+  return res.status(429).json({ message: "OTP vừa gửi, thử lại sau" });
+}
+
+
+   
 
     if (user.isVerified) {
       return res.status(400).json({ message: "Account already verified" });
@@ -467,7 +556,15 @@ router.put(
   authorizeRoles("ADMIN"),
   async (req, res) => {
     try {
-      const { role } = req.body;
+      
+
+let { role } = req.body;
+role = String(role).toUpperCase();
+
+const allowedRoles = ["USER", "ADMIN"];
+if (!allowedRoles.includes(role)) {
+  return res.status(400).json({ message: "Invalid role" });
+}
 
       const user = await User.findById(req.params.id);
 

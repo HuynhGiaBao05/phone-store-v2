@@ -35,13 +35,24 @@ const [otp, setOtp] = useState("");
   const handleLogin = async (e) => {
   e.preventDefault();
 
-    console.log("LOGIN USER PAGE"); 
+    console.log("LOGIN USER PAGE");
+    //check fomat 
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
+if (!emailRegex.test(loginEmail)) {
+  alert("Email không hợp lệ");
+  return;
+}
+
+    if (!loginEmail.trim() || !loginPassword) {
+  alert("Vui lòng nhập email và mật khẩu");
+  return;
+}
   try {
     const res = await axios.post(
       "http://localhost:5000/api/users/login",
       {
-        email: loginEmail,
+        email: loginEmail.trim(),
         password: loginPassword
       }
     );
@@ -54,11 +65,10 @@ if (role !== "USER") {
 }
 
     localStorage.setItem("token", res.data.token);
-    localStorage.setItem("role", res.data.role);
 
     alert("Đăng nhập thành công!");
 
-    window.location.href = "/"; // chuyển về home
+    navigate("/"); // chuyển về home
 
   } catch (error) {
   alert(error.response?.data?.message || "Đăng nhập thất bại");
@@ -66,15 +76,24 @@ if (role !== "USER") {
 };
 
   //=======Send OTP===========//
-  const handleSendOtp = async (e) => {
+  const [loading, setLoading] = useState(false); // nhớ thêm trên đầu
+
+const handleSendOtp = async (e) => {
   e.preventDefault();
 
-  try {
+  if (!forgotEmail.trim()) {
+    alert("Vui lòng nhập email");
+    return;
+  }
 
+  if (loading) return;
+  setLoading(true);
+
+  try {
     await axios.post(
       "http://localhost:5000/api/users/send-reset-otp",
       {
-        email: forgotEmail,
+        email: forgotEmail.trim(),
       }
     );
 
@@ -82,11 +101,11 @@ if (role !== "USER") {
     setForgotStep("otp");
 
   } catch (error) {
-
     alert(
       error.response?.data?.message || "Email không tồn tại"
     );
-
+  } finally {
+    setLoading(false);
   }
 };
 
@@ -94,15 +113,38 @@ if (role !== "USER") {
 const handleResetPassword = async (e) => {
   e.preventDefault();
 
+  // ✅ validate đúng dữ liệu
+  if (!forgotEmail.trim() || !forgotOtp.trim() || !newPassword) {
+  alert("Vui lòng nhập đầy đủ thông tin");
+  return;
+}
+
+ const passwordRegex =
+  /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[\W_]).{8,}$/;
+
+if (!passwordRegex.test(newPassword)) {
+  alert(
+    "Mật khẩu phải >=8 ký tự, gồm chữ hoa, chữ thường, số và ký tự đặc biệt"
+  );
+  return;
+}
+
   try {
     await axios.post("http://localhost:5000/api/users/reset-password", {
-      email: forgotEmail,
+      email: forgotEmail.trim(),
       otp: forgotOtp,
       newPassword,
     });
 
     alert("Đổi mật khẩu thành công!");
+
+    // reset state cho sạch
+    setForgotEmail("");
+    setForgotOtp("");
+    setNewPassword("");
     setForgotStep(null);
+    setLoginPassword("");
+    setLoginEmail("");
 
   } catch {
     alert("OTP không đúng hoặc hết hạn");
@@ -113,6 +155,32 @@ const handleResetPassword = async (e) => {
   const handleRegister = async (e) => {
   e.preventDefault();
 
+  // email format
+const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+if (!emailRegex.test(registerEmail)) {
+  alert("Email không hợp lệ");
+  return;
+}
+
+// password strong
+const passwordRegex =
+  /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[\W_]).{8,}$/;
+
+if (!passwordRegex.test(registerPassword)) {
+  alert(
+    "Mật khẩu phải >=8 ký tự, gồm chữ hoa, chữ thường, số và ký tự đặc biệt"
+  );
+  return;
+}
+
+  if (!name.trim() || !registerEmail.trim() || !registerPassword) {
+  alert("Vui lòng nhập đầy đủ thông tin");
+  return;
+}
+if (!confirmPassword) {
+  alert("Vui lòng nhập lại mật khẩu");
+  return;
+}
   if (registerPassword !== confirmPassword) {
     alert("Mật khẩu không khớp");
     return;
@@ -124,7 +192,7 @@ const handleResetPassword = async (e) => {
       "http://localhost:5000/api/users/register",
       {
         fullName: name,
-        email: registerEmail,
+        email: registerEmail.trim(),
         password: registerPassword,
       }
     );
@@ -149,14 +217,19 @@ const handleVerifyOtp = async (e) => {
     await axios.post(
       "http://localhost:5000/api/users/verify-otp",
       {
-        email: registerEmail,
+        email: registerEmail.trim(),
         otp: otp,
       }
     );
 
     alert("Xác thực thành công!");
+    setOtp("");
+    setRegisterEmail("");
+    setRegisterPassword("");
+    setConfirmPassword("");
     setIsActive(false);
     setStep("register");
+    setName("");
 
   } catch {
 
@@ -202,8 +275,9 @@ const handleVerifyOtp = async (e) => {
               Đăng ký
             </span>
           </p>
-
+          
         </form>
+        
       </div>
 
 
@@ -270,8 +344,8 @@ onChange={(e) => setOtp(e.target.value)}
 )}
 
 </div>
-      //Forgot Password Modal
-      {forgotStep && (
+      {/* Forgot Password Modal */}
+{forgotStep && (
   <div className="forgot-modal">
 
     {forgotStep === "email" && (
