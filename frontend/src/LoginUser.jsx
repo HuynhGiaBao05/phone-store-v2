@@ -2,27 +2,36 @@ import { useState } from "react";
 import axios from "axios";
 import "./Auth.css";
 import { useNavigate } from "react-router-dom";
-
+import { toast } from "react-toastify";
+import "react-toastify/dist/ReactToastify.css";
+import { ToastContainer } from "react-toastify";
 
 function LoginUser() {
-
   const [isActive, setIsActive] = useState(false);
   const navigate = useNavigate();
 
   // LOGIN
   const [loginEmail, setLoginEmail] = useState("");
   const [loginPassword, setLoginPassword] = useState("");
-
-
+  const [emailError, setEmailError] = useState("");
+const [passwordError, setPasswordError] = useState("");
+//verify OTP
+const [verifyLoading, setVerifyLoading] = useState(false);
   // REGISTER
   const [name, setName] = useState("");
   const [registerEmail, setRegisterEmail] = useState("");
   const [registerPassword, setRegisterPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
-
+  const [registerLoading, setRegisterLoading] = useState(false);
 //Fogot pass
 const [forgotStep, setForgotStep] = useState(null);
 // null | email | otp
+const [loginLoading, setLoginLoading] = useState(false);
+const [otpLoading, setOtpLoading] = useState(false);
+const [resetLoading, setResetLoading] = useState(false);//check format
+const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+const passwordRegex =
+  /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[\W_]).{8,}$/;
 
 const [forgotEmail, setForgotEmail] = useState("");
 const [forgotOtp, setForgotOtp] = useState("");
@@ -37,106 +46,153 @@ const [otp, setOtp] = useState("");
 
     console.log("LOGIN USER PAGE");
     //check fomat 
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    const cleanEmail = loginEmail.trim();
+     const cleanPassword = loginPassword.trim();
 
-if (!emailRegex.test(loginEmail)) {
-  alert("Email không hợp lệ");
+
+if (loginLoading) return;
+
+setEmailError("");
+setPasswordError("");
+
+if (!cleanEmail) {
+  setEmailError("Vui lòng nhập email");
   return;
 }
 
-    if (!loginEmail.trim() || !loginPassword) {
-  alert("Vui lòng nhập email và mật khẩu");
+if (!emailRegex.test(cleanEmail)) {
+  setEmailError("Email không hợp lệ");
   return;
 }
+
+if (!cleanPassword) {
+  setPasswordError("Vui lòng nhập mật khẩu");
+  return;
+}
+setLoginLoading(true);
+
+
+
+   
   try {
     const res = await axios.post(
       "http://localhost:5000/api/users/login",
       {
-        email: loginEmail.trim(),
-        password: loginPassword
+        email: cleanEmail,
+        password: cleanPassword
       }
+      
     );
 
     const role = res.data.role?.toUpperCase();
 
+
 if (role !== "USER") {
-  alert("Tài khoản này không phải USER");
+  toast.error("Tài khoản này không phải USER");
   return;
 }
-
+if (!res.data.token) {
+  toast.error("Token không hợp lệ");
+  return;
+}
     localStorage.setItem("token", res.data.token);
-
-    alert("Đăng nhập thành công!");
-
+    localStorage.setItem("role", role);
+    toast.success("Đăng nhập thành công!");
+    toast.info("Đã gửi email cảnh báo đăng nhập");
     navigate("/"); // chuyển về home
-
-  } catch (error) {
-  alert(error.response?.data?.message || "Đăng nhập thất bại");
+setLoginEmail("");
+setLoginPassword("");
+}catch (error) {
+  toast.error(error.response?.data?.message || "Đăng nhập thất bại");
+}
+ finally {
+  setLoginLoading(false);
 }
 };
 
   //=======Send OTP===========//
-  const [loading, setLoading] = useState(false); // nhớ thêm trên đầu
 
 const handleSendOtp = async (e) => {
   e.preventDefault();
+const cleanEmail = forgotEmail.trim();
 
-  if (!forgotEmail.trim()) {
-    alert("Vui lòng nhập email");
-    return;
-  }
 
-  if (loading) return;
-  setLoading(true);
+if (!cleanEmail) {
+  toast.error("Vui lòng nhập email");
+  return;
+}
+
+if (!emailRegex.test(cleanEmail)) {
+toast.error("Email không hợp lệ");
+return;
+}
+
+  if (otpLoading) return;
+setOtpLoading(true);
 
   try {
     await axios.post(
       "http://localhost:5000/api/users/send-reset-otp",
       {
-        email: forgotEmail.trim(),
+        email: cleanEmail,
       }
     );
 
-    alert("OTP đã gửi về email!");
+    toast.success("OTP đã gửi về email!");
     setForgotStep("otp");
 
   } catch (error) {
-    alert(
-      error.response?.data?.message || "Email không tồn tại"
-    );
+    toast.error(error.response?.data?.message || "Email không tồn tại");
   } finally {
-    setLoading(false);
+      setOtpLoading(false);
+
   }
+  
 };
+
 
 //========Reset Pass=====//
 const handleResetPassword = async (e) => {
   e.preventDefault();
+  setResetLoading(true);
+  const cleanEmail = forgotEmail.trim();
+  const cleanOtp = forgotOtp.trim(); 
+const cleanPassword = newPassword.trim();
 
+if (!emailRegex.test(cleanEmail)) {
+  toast.error("Email không hợp lệ");
+ setResetLoading(false);
+  return;
+
+}
   // ✅ validate đúng dữ liệu
-  if (!forgotEmail.trim() || !forgotOtp.trim() || !newPassword) {
-  alert("Vui lòng nhập đầy đủ thông tin");
+if (!cleanEmail || !cleanOtp || !cleanPassword) {
+  toast.error ("Vui lòng nhập đầy đủ thông tin");
+  setResetLoading(false);
   return;
 }
+ if (!/^\d{6}$/.test(cleanOtp)) {
+    toast.error ("OTP phải là 6 chữ số");
+      setResetLoading(false);
+    return;
+  }
 
- const passwordRegex =
-  /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[\W_]).{8,}$/;
-
-if (!passwordRegex.test(newPassword)) {
-  alert(
+if (!passwordRegex.test(cleanPassword)) {
+  toast.error(
     "Mật khẩu phải >=8 ký tự, gồm chữ hoa, chữ thường, số và ký tự đặc biệt"
   );
+  setResetLoading(false);
   return;
 }
 
   try {
     await axios.post("http://localhost:5000/api/users/reset-password", {
-      email: forgotEmail.trim(),
-      otp: forgotOtp,
-      newPassword,
+      email: cleanEmail,
+      otp: cleanOtp,
+      newPassword: cleanPassword,
     });
 
-    alert("Đổi mật khẩu thành công!");
+    toast.success("Đổi mật khẩu thành công!");
 
     // reset state cho sạch
     setForgotEmail("");
@@ -147,63 +203,82 @@ if (!passwordRegex.test(newPassword)) {
     setLoginEmail("");
 
   } catch {
-    alert("OTP không đúng hoặc hết hạn");
+    toast.error("OTP không đúng hoặc hết hạn");
   }
+  finally {
+  setResetLoading(false);
+}
 };
 
   // ================= REGISTER =================
   const handleRegister = async (e) => {
   e.preventDefault();
+  setRegisterLoading(true);
+
+
+    if (!name.trim() || !registerEmail.trim() || !registerPassword) {
+  toast.error("Vui lòng nhập đầy đủ thông tin");
+    setRegisterLoading(false);
+  return;
+}
+const cleanEmail = registerEmail.trim();
+const cleanPassword = registerPassword.trim();
 
   // email format
-const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-if (!emailRegex.test(registerEmail)) {
-  alert("Email không hợp lệ");
+if (!emailRegex.test(cleanEmail)) {
+toast.error("Email không hợp lệ");
+setRegisterLoading(false);
   return;
 }
 
 // password strong
-const passwordRegex =
-  /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[\W_]).{8,}$/;
 
-if (!passwordRegex.test(registerPassword)) {
-  alert(
+
+
+
+if (!passwordRegex.test(cleanPassword)) {
+  toast.error(
     "Mật khẩu phải >=8 ký tự, gồm chữ hoa, chữ thường, số và ký tự đặc biệt"
   );
+  setRegisterLoading(false);
   return;
 }
 
-  if (!name.trim() || !registerEmail.trim() || !registerPassword) {
-  alert("Vui lòng nhập đầy đủ thông tin");
-  return;
-}
+  
 if (!confirmPassword) {
-  alert("Vui lòng nhập lại mật khẩu");
+ toast.error("Vui lòng nhập lại mật khẩu");
+ setRegisterLoading(false);
   return;
 }
-  if (registerPassword !== confirmPassword) {
-    alert("Mật khẩu không khớp");
+  if (cleanPassword !== confirmPassword) {
+    toast.error ("Mật khẩu không khớp");
+    setRegisterLoading(false);
     return;
   }
-
   try {
 
     const res = await axios.post(
       "http://localhost:5000/api/users/register",
       {
         fullName: name,
-        email: registerEmail.trim(),
-        password: registerPassword,
+        email: cleanEmail,
+        password: cleanPassword 
       }
     );
 
-    alert(res.data.message);
+    toast.success(res.data.message);
+    setRegisterPassword("");
+    setName("");
+    setConfirmPassword("");
+    setOtp("");
 
     setStep("otp");   // 👈 chuyển sang nhập OTP
 
   } catch (error) {
 
-    alert(error.response?.data?.message || "Đăng ký thất bại");
+    toast.error(error.response?.data?.message || "Đăng ký thất bại");
+    } finally {
+  setRegisterLoading(false); // 👈 THÊM
 
   }
 };
@@ -211,36 +286,57 @@ if (!confirmPassword) {
 //===========verify OTP=====//
 const handleVerifyOtp = async (e) => {
   e.preventDefault();
+  setVerifyLoading(true);
 
+  if (!/^\d{6}$/.test(otp)) {
+  toast.error("OTP phải là 6 chữ số");
+  setVerifyLoading(false);
+  return;
+}
+const cleanEmail = registerEmail.trim();
+
+if (!cleanEmail) {
+  toast.error("Email không tồn tại");
+  setVerifyLoading(false);
+  return;
+}
   try {
 
     await axios.post(
       "http://localhost:5000/api/users/verify-otp",
       {
-        email: registerEmail.trim(),
+        email: cleanEmail,
         otp: otp,
       }
+      
+      
     );
+    
 
-    alert("Xác thực thành công!");
+    toast.success("Xác thực thành công!");
     setOtp("");
-    setRegisterEmail("");
     setRegisterPassword("");
     setConfirmPassword("");
     setIsActive(false);
     setStep("register");
     setName("");
 
-  } catch {
-
-    alert("OTP không đúng hoặc đã hết hạn");
-
   }
+  
+  
+  catch {
+
+   toast.error("OTP không đúng hoặc đã hết hạn");
+
+  } finally {
+  setVerifyLoading(false);
+  }
+  
 };
 
   return (
     <div className={`auth-container ${isActive ? "active" : ""}`}>
-
+<ToastContainer />
       {/* LOGIN */}
       <div className="form-container login-container">
         <form onSubmit={handleLogin}>
@@ -248,20 +344,32 @@ const handleVerifyOtp = async (e) => {
           <h2>Đăng Nhập</h2>
 
           <input
-            type="email"
-            placeholder="Email"
-            value={loginEmail}
-            onChange={(e) => setLoginEmail(e.target.value)}
-          />
+  type="email"
+  placeholder="Email"
+  value={loginEmail}
+  onChange={(e) => {
+    setLoginEmail(e.target.value);
+    setEmailError("");
+  }}
+/>
+{emailError && <p className="error">{emailError}</p>}
 
-          <input
-            type="password"
-            placeholder="Mật khẩu"
-            value={loginPassword}
-            onChange={(e) => setLoginPassword(e.target.value)}
-          />
+<input
+  type="password"
+  placeholder="Mật khẩu"
+  value={loginPassword}
+  onChange={(e) => {
+    setLoginPassword(e.target.value);
+    setPasswordError("");
+  }}
+/>
+{passwordError && <p className="error">{passwordError}</p>}
 
-          <button type="submit">Đăng nhập</button>
+          <button
+  type="submit"
+disabled={loginLoading || !!emailError || !!passwordError}>
+            {loginLoading ? "Đang xử lý..." : "Đăng nhập"}
+          </button>
 
           <p className="forgot-link">
             <span onClick={() => setForgotStep("email")}>
@@ -318,7 +426,9 @@ value={confirmPassword}
 onChange={(e) => setConfirmPassword(e.target.value)}
 />
 
-<button type="submit">Đăng ký</button>
+<button type="submit" disabled={registerLoading}>
+  {registerLoading ? "Đang xử lý..." : "Đăng ký"}
+</button>
 
 </form>
 
@@ -334,11 +444,13 @@ onChange={(e) => setConfirmPassword(e.target.value)}
 type="text"
 placeholder="Nhập OTP"
 value={otp}
+
 onChange={(e) => setOtp(e.target.value)}
 />
 
-<button type="submit">Xác nhận OTP</button>
-
+<button type="submit" disabled={verifyLoading}>
+  {verifyLoading ? "Đang xác thực..." : "Xác nhận OTP"}
+</button>
 </form>
 
 )}
@@ -359,7 +471,9 @@ onChange={(e) => setOtp(e.target.value)}
           onChange={(e) => setForgotEmail(e.target.value)}
         />
 
-        <button type="submit">Gửi OTP</button>
+        <button type="submit" disabled={otpLoading}>
+            {otpLoading ? "Đang gửi..." : "Gửi OTP"}
+        </button>
 
         <p className="switch-text">
           <span onClick={() => setForgotStep(null)}>
@@ -387,7 +501,9 @@ onChange={(e) => setOtp(e.target.value)}
           onChange={(e) => setNewPassword(e.target.value)}
         />
 
-        <button type="submit">Đổi mật khẩu</button>
+        <button type="submit" disabled={resetLoading}>
+          {resetLoading ? "Đang xử lý..." : "Đổi mật khẩu"}
+        </button>
 
         
       </form>

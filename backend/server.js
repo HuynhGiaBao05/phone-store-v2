@@ -11,19 +11,30 @@ const helmet = require("helmet");
 
 const rateLimit = require("express-rate-limit");
 
-
 // 🛡️ BRUTE FORCE PROTECTION: limit login attempts
+const isDev = process.env.NODE_ENV !== "production";
+
 const loginLimiter = rateLimit({
-  windowMs: 15 * 60 * 1000,
-  max: 5,
+  windowMs: 60 * 1000, // 60 giây
+   max: isDev ? 100 : 5,
+  message: {
+    message: "Bạn đã thử đăng nhập quá nhiều lần, thử lại sau 60 giây",
+  },
+  standardHeaders: true,
+  legacyHeaders: false,
 });
 
+
 // 🛡️ SECURITY FIRST
-app.use(helmet());
+app.use(
+  helmet({
+    contentSecurityPolicy: false
+  })
+);
+app.set("trust proxy", 1);
 app.use(helmet.crossOriginResourcePolicy({ policy: "cross-origin" }));
 
 // 🛡️ TRUST PROXY (PHẢI ĐỂ SỚM)
-app.set("trust proxy", true);
 
 // 🌐 CORS
 app.use(
@@ -35,22 +46,46 @@ app.use(
 
 // 🛡️ BODY
 app.use(express.json({ limit: "10kb" }));
-// ✅ FIX: tránh crash req.query + injection basic
+
+// 🛡️ chống NoSQL injection
+// 🛡️ CUSTOM NoSQL SANITIZE 
+// 🛡️ FULL SANITIZE (NoSQL + Prototype Pollution)
 app.use((req, res, next) => {
-  try {
-    if (req.body && typeof req.body !== "object") {
-      return res.status(400).json({ message: "Invalid body" });
+  const clean = (obj) => {
+    if (!obj || typeof obj !== "object") return;
+
+    // xử lý array
+    if (Array.isArray(obj)) {
+      obj.forEach(clean);
+      return;
     }
 
-    if (req.query && typeof req.query !== "object") {
-      return res.status(400).json({ message: "Invalid query" });
-    }
+    // 🔥 chống prototype pollution
+    delete obj.__proto__;
+    delete obj.constructor;
+    delete obj.prototype;
 
-    next();
-  } catch (err) {
-    next(err);
-  }
+    Object.keys(obj).forEach((key) => {
+      // 🔥 chống NoSQL injection
+      if (key.startsWith("$") || key.includes(".")) {
+        delete obj[key];
+        return;
+      }
+
+      // 🔥 recursive
+      if (typeof obj[key] === "object" && obj[key] !== null) {
+        clean(obj[key]);
+      }
+    });
+  };
+
+  clean(req.body);
+  clean(req.query);
+  clean(req.params);
+
+  next();
 });
+
 // 🛡️ BRUTE FORCE
 app.use("/api/users/login", loginLimiter);
 
@@ -59,9 +94,9 @@ app.use("/api/users/login", loginLimiter);
 // 🛡️ XSS: Content Security Policy
 app.use((req, res, next) => {
   res.setHeader(
-    "Content-Security-Policy",
-    "default-src * 'self' data: blob:; script-src * 'self' 'unsafe-inline' 'unsafe-eval';"
-  );
+  "Content-Security-Policy",
+  "default-src 'self'; img-src 'self' data: blob:; script-src 'self'; style-src 'self' 'unsafe-inline';"
+);
   next();
 });
 
@@ -165,5 +200,5 @@ mongoose
     });
   })
   .catch((err) => {
-    console.error("MongoDB connection error ❌", err);
+console.error("MongoDB error:", err.message);
   });

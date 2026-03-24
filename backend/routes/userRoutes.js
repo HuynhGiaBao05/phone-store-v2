@@ -6,6 +6,7 @@ const User = require("../models/User");
 const sendEmail = require("../utils/sendEmail");
 const xss = require("xss"); // 🛡️ XSS: sanitize input
 
+const crypto = require("crypto");
 // CREATE USER
 const { protect, authorizeRoles } = require("../middleware/authMiddleware");
 
@@ -76,10 +77,9 @@ const hashedPassword = await bcrypt.hash(password, 10);
       isVerified: true,
       isActive: true
     });
+await user.save();
 
 
-
-    await user.save();
 
     res.json({ message: "User created successfully" });
   } catch (error) {
@@ -108,10 +108,11 @@ if (!email || !password) {
 if (!validateEmail(email)) {
   return res.status(400).json({ message: "Email không hợp lệ" });
 }
-
+if (typeof email !== "string" || typeof password !== "string") {
+  return res.status(400).json({ message: "Invalid input type" });
+}
     const cleanEmail = email.trim().toLowerCase();
-    const user = await User.findOne({ email: cleanEmail });
-
+const user = await User.findOne({ email: cleanEmail }).select("+password");
     if (!user) {
       return res.status(400).json({ message: "Invalid email or password" });
     }
@@ -135,64 +136,171 @@ if (!validateEmail(email)) {
 
     // ❌ WRONG PASSWORD
     if (!isMatch) {
-      user.loginAttempts += 1;
+      user.loginAttempts = (user.loginAttempts || 0) + 1;
 
       if (user.loginAttempts >= 5) {
         user.lockUntil = Date.now() + 60 * 1000;
         user.loginAttempts = 0;
       }
 
-      await user.save();
-
+        await user.save();
       return res.status(400).json({ message: "Invalid email or password" });
     }
 
     // ✅ LOGIN SUCCESS
     user.loginAttempts = 0;
     user.lockUntil = undefined;
-    await user.save();
 
-    // 🛡️ USE MFA (EMAIL ALERT - kiểu Google)
-    const ip =
-      (req.headers["x-forwarded-for"] || "")
-        .split(",")[0]
-        .trim() || req.socket.remoteAddress;
+    // ================= FIX MFA + ALERT =================
 
-    await sendEmail(
-      user.email,
-      "Cảnh báo đăng nhập",
-      `
-      <h3>🔐 Cảnh báo đăng nhập</h3>
-      <p>Tài khoản của bạn vừa đăng nhập:</p>
+const role = user.role?.toUpperCase();
 
-      <ul>
-        <li><b>Thời gian:</b> ${new Date().toLocaleString()}</li>
-        <li><b>IP:</b> ${ip}</li>
-        <li><b>Thiết bị:</b> ${req.headers["user-agent"]}</li>
-      </ul>
+// 🛡️ LẤY IP + DEVICE
+const ip =
+  (req.headers["x-forwarded-for"] || "")
+    .split(",")[0]
+    .trim() || req.socket.remoteAddress;
 
-      <p style="color:red;">Nếu không phải bạn, hãy đổi mật khẩu ngay!</p>
-      `
-    );
+const agent = req.headers["user-agent"];
 
-    // 🛡️ USE JWT
-    const token = jwt.sign(
-      { id: user._id, role: user.role },
-      process.env.JWT_SECRET,
-      { expiresIn: "1d" }
-    );
+// ================= SAVE LOGIN HISTORY =================
+if (!user.loginHistory) {
+  user.loginHistory = [];
+}
 
-    res.json({
-      message: "Login successful",
-      token,
-      role: user.role
-    });
-
-  } catch (error) {
-    res.status(500).json({ error: error.message });
-  }
+user.loginHistory.push({
+  ip,
+  userAgent: agent
 });
 
+// chỉ giữ 5 login gần nhất (FIX DB phình)
+if (user.loginHistory.length > 5) {
+  user.loginHistory.shift();
+}
+
+// ================= USER → CHỈ CẢNH BÁO =================
+if (role === "USER") {
+  const alertToken = crypto.randomBytes(32).toString("hex");
+
+  user.loginToken = alertToken; // FIX ALERT
+  user.loginTokenExpire = Date.now() + 10 * 60 * 1000;
+
+
+  const denyLink = `http://localhost:5000/api/users/deny-login/${alertToken}`;
+
+  // 📧 EMAIL CẢNH BÁO
+    await user.save();
+
+  await sendEmail(
+    user.email,
+    "Cảnh báo đăng nhập",
+    `
+      <h3>🔐 Cảnh báo đăng nhập</h3>
+
+      <p>Có đăng nhập mới:</p>
+
+      <ul>
+        <li><b>IP:</b> ${ip}</li>
+        <li><b>Thiết bị:</b> ${agent}</li>
+      </ul>
+
+      <p>Nếu là bạn → bỏ qua email này.</p>
+
+      <a href="${denyLink}"
+         style="padding:10px 20px;background:red;color:white;">
+         ❌ Không phải tôi
+      </a>
+    `
+  );
+
+  // 👉 LOGIN LUÔN
+  const token = jwt.sign(
+    { id: user._id, role: user.role },
+    process.env.JWT_SECRET,
+    { expiresIn: "1d" }
+  );
+
+  return res.json({
+    message: "Login successful",
+    token,
+    role: user.role
+  });
+}
+
+// ================= ADMIN / STAFF → MFA CHẶN LOGIN =================
+if (role === "ADMIN" || role === "STAFF") {
+
+  // 🔥 nếu token còn hạn → chặn spam
+  if (user.loginTokenExpire && user.loginTokenExpire > Date.now()) {
+    return res.status(429).json({
+      message: "Đã gửi xác nhận, kiểm tra email"
+    });
+  }
+
+  // 🔥 nếu token hết hạn → reset
+  if (user.loginTokenExpire && user.loginTokenExpire <= Date.now()) {
+    user.loginToken = null;
+    user.loginTokenExpire = null;
+    user.isLoginApproved = false;
+  }
+
+  const loginToken = crypto.randomBytes(32).toString("hex");
+
+  user.loginToken = loginToken;
+  user.loginTokenExpire = Date.now() + 5 * 60 * 1000;
+  user.isLoginApproved = false;
+
+  await user.save();
+
+  const confirmLink = `http://localhost:5000/api/users/approve-login/${loginToken}`;
+  const denyLink = `http://localhost:5000/api/users/deny-login/${loginToken}`;
+
+  await sendEmail(
+  user.email,
+  "Xác nhận đăng nhập",
+  `
+  <div style="font-family:Arial,sans-serif;text-align:center;padding:20px">
+    
+    <h2>🔐 Xác nhận đăng nhập</h2>
+    <p>Bạn vừa đăng nhập vào hệ thống</p>
+
+    <div style="background:#f6f6f6;padding:15px;border-radius:8px;margin:20px auto;display:inline-block;text-align:left">
+      <p><b>Tên thiết bị:</b> ${agent}</p>
+      <p><b>Địa chỉ IP:</b> ${ip}</p>
+      <p><b>Thời gian:</b> ${new Date().toLocaleString("vi-VN")}</p>
+    </div>
+
+    <div style="margin-top:20px">
+      <a href="${confirmLink}" 
+         style="background:#28a745;color:#fff;padding:12px 20px;border-radius:6px;text-decoration:none;font-weight:bold;margin-right:10px;display:inline-block">
+        ✅ Đây là tôi
+      </a>
+
+      <a href="${denyLink}" 
+         style="background:#dc3545;color:#fff;padding:12px 20px;border-radius:6px;text-decoration:none;font-weight:bold;display:inline-block">
+        ❌ Không phải là tôi
+      </a>
+    </div>
+
+  </div>
+  `
+);
+
+  return res.json({
+    requireApproval: true,
+    message: "Vui lòng xác nhận email"
+  });
+}
+return res.status(400).json({ message: "Login failed" });
+
+} catch (error) {
+  console.error("LOGIN ERROR:", error);
+  res.status(500).json({ message: error.message });
+}
+});
+    
+
+   
 
 
 
@@ -225,8 +333,11 @@ if (!user) {
   return res.status(400).json({ message: "Email not found" });
 }
 
-if (user.otpExpire && user.otpExpire > Date.now()) {
-  return res.status(429).json({ message: "OTP vừa gửi, thử lại sau" });
+// ⏱️ chặn spam 60s
+if (user.otpCooldown && user.otpCooldown > Date.now()) {
+  return res.status(429).json({
+    message: "Vui lòng đợi 60s để gửi lại OTP"
+  });
 }
 
 
@@ -235,7 +346,7 @@ if (user.otpExpire && user.otpExpire > Date.now()) {
     const otp = Math.floor(100000 + Math.random() * 900000).toString();
 
     user.otpCode = otp;
-    user.otpExpire = Date.now() + 5 * 60 * 1000;
+    user.otpExpire = Date.now() + 60 * 1000;
 
     await user.save();
 
@@ -306,6 +417,48 @@ if (!newPassword || !validatePassword(newPassword)) {
 
   } catch (error) {
     res.status(500).json({ error: error.message });
+  }
+});
+
+// ================= CHECK LOGIN APPROVED =================
+router.get("/check-login-approved/:email", async (req, res) => {
+  try {
+    let email = String(req.params.email);
+    email = xss(email);
+
+    if (!validateEmail(email)) {
+      return res.json({ approved: false });
+    }
+
+    const cleanEmail = email.trim().toLowerCase();
+    const user = await User.findOne({ email: cleanEmail });
+
+    if (!user) return res.json({ approved: false });
+
+    if (user.isLoginApproved) {
+      const token = jwt.sign(
+        { id: user._id, role: user.role },
+        process.env.JWT_SECRET,
+        { expiresIn: "1d" }
+      );
+
+      user.isLoginApproved = false;
+      user.loginToken = null;
+      user.loginTokenExpire = null;
+
+      await user.save();
+
+      return res.json({
+        approved: true,
+        token,
+        role: user.role
+      });
+    }
+
+    res.json({ approved: false });
+
+  } catch (err) {
+    res.status(500).json({ approved: false });
   }
 });
 
@@ -488,7 +641,7 @@ if (user.otpExpire && user.otpExpire > Date.now()) {
     const newOtp = Math.floor(100000 + Math.random() * 900000).toString();
 
     user.otpCode = newOtp;
-    user.otpExpire = Date.now() + 5 * 60 * 1000;
+    user.otpExpire = Date.now() + 60 * 1000;
 
     await user.save();
 
@@ -616,5 +769,65 @@ router.delete(
     }
   }
 );
+
+  // ================= FIX MFA APPROVE =================
+// APPROVE LOGIN
+router.get("/approve-login/:token", async (req, res) => {
+  try {
+    const user = await User.findOne({ loginToken: req.params.token });
+
+    if (!user || user.loginTokenExpire < Date.now()) {
+      return res.send(`
+        <script>
+          window.close();
+        </script>
+      `);
+    }
+
+    user.isLoginApproved = true;
+    user.loginToken = null;
+    user.loginTokenExpire = null;
+
+    await user.save();
+
+    // 🔥 QUAN TRỌNG: auto đóng tab
+    res.send(`
+      <script>
+        window.open('', '_self');
+        window.close();
+      </script>
+    `);
+
+  } catch (err) {
+    res.send(`
+      <script>
+        window.close();
+      </script>
+    `);
+  }
+});
+
+// DENY LOGIN
+router.get("/deny-login/:token", async (req, res) => {
+  try {
+    const user = await User.findOne({ loginToken: req.params.token });
+
+    if (user) {
+      user.isLoginApproved = false;
+      user.loginToken = null;
+
+      if (user.role === "USER") {
+        user.isActive = false;
+      }
+
+      await user.save();
+    }
+
+    res.send("Đã từ chối đăng nhập");
+  } catch {
+    res.send("Có lỗi xảy ra");
+  }
+});
+
 
 module.exports = router;

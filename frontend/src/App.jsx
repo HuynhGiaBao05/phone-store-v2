@@ -35,10 +35,16 @@ import LoginUser from "./LoginUser";
 import Profile from "./Profile";
 import Orders from "./Orders";
 
+import MfaWait from "./MfaWait";
+import { ToastContainer } from "react-toastify";
+import "react-toastify/dist/ReactToastify.css";
+
 function App() {
   return (
     <>
       <ScrollToTop />
+            <ToastContainer position="top-right" autoClose={2000} />
+
       <Routes>
 
       {/* ===== USER LAYOUT (CÓ NAVBAR) ===== */}
@@ -64,7 +70,7 @@ function App() {
       {/* ===== KHÔNG CÓ NAVBAR ===== */}
       <Route path="/admin-login" element={<AdminLogin />} />
       <Route path="/forgot-password" element={<ForgotPassword />} />
-      
+      <Route path="/mfa-wait" element={<MfaWait />} />
 
 
       {/* ===== ADMIN ===== */}

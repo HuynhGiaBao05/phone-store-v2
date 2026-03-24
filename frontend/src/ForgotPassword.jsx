@@ -6,6 +6,7 @@ import { useNavigate } from "react-router-dom";
 function ForgotPassword() {
   const [step, setStep] = useState(1);
   const [email, setEmail] = useState("");
+  const [resetLoading, setResetLoading] = useState(false);
   const [otp, setOtp] = useState("");
   const [newPassword, setNewPassword] = useState("");
 
@@ -152,9 +153,13 @@ const navigate = useNavigate();
               onChange={(e) => setNewPassword(e.target.value)}
             />
 
-            <button onClick={handleResetPassword} disabled={loading}>
-              {loading ? "Đang xử lý..." : "Đổi mật khẩu"}
-            </button>
+            <button
+            type="button"
+            onClick={handleResetPassword}
+            disabled={loading}
+          >
+            {loading ? "Đang xử lý..." : "Đổi mật khẩu"}
+          </button>
 
             {/* Countdown + Resend */}
             <div className="resend-area">

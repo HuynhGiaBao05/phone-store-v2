@@ -41,12 +41,21 @@ if (!passwordRegex.test(password)) {
         { email, password }
       );
 
-      const role = res.data.role?.toUpperCase();
+      // 🔥 MFA: nếu cần xác nhận email
+if (res.data.requireApproval) {
+  alert("Vui lòng xác nhận đăng nhập qua email");
 
-      // 🔐 Lưu token
-      localStorage.setItem("adminToken", res.data.token);
-      localStorage.setItem("adminRole", res.data.role);
+  navigate(`/mfa-wait?email=${email}`);
+  return;
+}
 
+// ✅ CHỈ LƯU TOKEN KHI CÓ TOKEN
+if (res.data.token) {
+  localStorage.setItem("adminToken", res.data.token);
+  localStorage.setItem("adminRole", res.data.role);
+}
+
+const role = res.data.role?.toUpperCase();
       // 🔀 Điều hướng theo role
       if (role === "ADMIN") {
         navigate("/admin-dashboard");

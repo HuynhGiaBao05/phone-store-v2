@@ -3,7 +3,8 @@ const mongoose = require("mongoose");
 const userSchema = new mongoose.Schema({
   fullName: {
     type: String,
-    required: true
+    required: true,
+    trim: true
   },
 
   email: {
@@ -11,7 +12,8 @@ const userSchema = new mongoose.Schema({
   required: true,
   unique: true,
   lowercase: true,
-  trim: true
+  trim: true,
+  index: true 
   },
 
   phone: {
@@ -24,7 +26,8 @@ const userSchema = new mongoose.Schema({
 
   password: {
     type: String,
-    required: true
+    required: true,
+    select: false
   },
 
   role: {
@@ -32,6 +35,30 @@ const userSchema = new mongoose.Schema({
     enum: ["USER", "STAFF", "ADMIN"],
     default: "USER"
   },
+// ================= MFA =================
+loginToken: String,
+loginTokenExpire: Date,
+
+isLoginApproved: {
+  type: Boolean,
+  default: false,
+},
+
+loginHistory: {
+  type: [
+    {
+      ip: String,
+      userAgent: String,
+      time: {
+        type: Date,
+        default: Date.now
+      }
+    }
+  ],
+  default: []
+},
+
+
 
   // =========================
   // 🔐 ACCOUNT STATUS
@@ -49,7 +76,8 @@ const userSchema = new mongoose.Schema({
 
   loginAttempts: {
     type: Number,
-    default: 0
+    default: 0,
+    max: 10
   },
 
   lockUntil: {
@@ -65,9 +93,15 @@ const userSchema = new mongoose.Schema({
   },
 
   otpExpire: {
-    type: Date
+    type: Date,
   }
 
-}, { timestamps: true });
+
+  
+}, 
+
+
+{ timestamps: true });
+
 
 module.exports = mongoose.model("User", userSchema);
