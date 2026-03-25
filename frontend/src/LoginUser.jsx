@@ -15,6 +15,8 @@ function LoginUser() {
   const [loginPassword, setLoginPassword] = useState("");
   const [emailError, setEmailError] = useState("");
 const [passwordError, setPasswordError] = useState("");
+const [showLoginPassword, setShowLoginPassword] = useState(false);
+
 //verify OTP
 const [verifyLoading, setVerifyLoading] = useState(false);
   // REGISTER
@@ -23,8 +25,13 @@ const [verifyLoading, setVerifyLoading] = useState(false);
   const [registerPassword, setRegisterPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   const [registerLoading, setRegisterLoading] = useState(false);
+  const [showRegisterPassword, setShowRegisterPassword] = useState(false);
+const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+
 //Fogot pass
 const [forgotStep, setForgotStep] = useState(null);
+const [showNewPassword, setShowNewPassword] = useState(false);
+
 // null | email | otp
 const [loginLoading, setLoginLoading] = useState(false);
 const [otpLoading, setOtpLoading] = useState(false);
@@ -354,15 +361,33 @@ if (!cleanEmail) {
 />
 {emailError && <p className="error">{emailError}</p>}
 
-<input
-  type="password"
-  placeholder="Mật khẩu"
-  value={loginPassword}
-  onChange={(e) => {
-    setLoginPassword(e.target.value);
-    setPasswordError("");
-  }}
-/>
+<div style={{ position: "relative", width: "100%" }}>
+  <input
+    type={showLoginPassword ? "text" : "password"}
+    placeholder="Mật khẩu"
+    value={loginPassword}
+    onChange={(e) => {
+      setLoginPassword(e.target.value);
+      setPasswordError("");
+    }}
+    style={{ width: "100%" }}
+  />
+
+  <span
+    onClick={() => setShowLoginPassword(!showLoginPassword)}
+    style={{
+      position: "absolute",
+      right: "15px",
+      top: "50%",
+      transform: "translateY(-50%)",
+      cursor: "pointer",
+      fontSize: "18px"
+    }}
+  >
+    {showLoginPassword ? "🙈" : "👁️"}
+  </span>
+</div>
+  
 {passwordError && <p className="error">{passwordError}</p>}
 
           <button
@@ -412,19 +437,50 @@ value={registerEmail}
 onChange={(e) => setRegisterEmail(e.target.value)}
 />
 
-<input
-type="password"
-placeholder="Mật khẩu"
-value={registerPassword}
-onChange={(e) => setRegisterPassword(e.target.value)}
-/>
+<div style={{ position: "relative" }}>
+  <input
+    type={showRegisterPassword ? "text" : "password"}
+    placeholder="Mật khẩu"
+    value={registerPassword}
+    onChange={(e) => setRegisterPassword(e.target.value)}
+  />
 
-<input
-type="password"
-placeholder="Nhập lại mật khẩu"
-value={confirmPassword}
-onChange={(e) => setConfirmPassword(e.target.value)}
-/>
+  <span
+    onClick={() => setShowRegisterPassword(!showRegisterPassword)}
+    style={{
+      position: "absolute",
+      right: "10px",
+      top: "50%",
+      transform: "translateY(-50%)",
+      cursor: "pointer"
+    }}
+  >
+    👁️
+  </span>
+</div>
+
+
+<div style={{ position: "relative" }}>
+  <input
+    type={showConfirmPassword ? "text" : "password"}
+    placeholder="Nhập lại mật khẩu"
+    value={confirmPassword}
+    onChange={(e) => setConfirmPassword(e.target.value)}
+  />
+  <span
+    onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+    style={{
+      position: "absolute",
+      right: "10px",
+      top: "50%",
+      transform: "translateY(-50%)",
+      cursor: "pointer"
+    }}
+  >
+    👁️
+  </span>
+</div>
+
 
 <button type="submit" disabled={registerLoading}>
   {registerLoading ? "Đang xử lý..." : "Đăng ký"}
@@ -494,12 +550,27 @@ onChange={(e) => setOtp(e.target.value)}
           onChange={(e) => setForgotOtp(e.target.value)}
         />
 
-        <input
-          type="password"
-          placeholder="Mật khẩu mới"
-          value={newPassword}
-          onChange={(e) => setNewPassword(e.target.value)}
-        />
+        <div style={{ position: "relative" }}>
+  <input
+    type={showNewPassword ? "text" : "password"}
+    placeholder="Mật khẩu mới"
+    value={newPassword}
+    onChange={(e) => setNewPassword(e.target.value)}
+  />
+  <span
+    onClick={() => setShowNewPassword(!showNewPassword)}
+    style={{
+      position: "absolute",
+      right: "10px",
+      top: "50%",
+      transform: "translateY(-50%)",
+      cursor: "pointer"
+    }}
+  >
+    👁️
+  </span>
+</div>
+         
 
         <button type="submit" disabled={resetLoading}>
           {resetLoading ? "Đang xử lý..." : "Đổi mật khẩu"}
