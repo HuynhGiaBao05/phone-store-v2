@@ -363,18 +363,15 @@ if (!cleanEmail) {
 
 <div style={{ position: "relative", width: "100%" }}>
   <input
-    type={showLoginPassword ? "text" : "password"}
-    placeholder="Mật khẩu"
-    value={loginPassword}
-    onChange={(e) => {
-      setLoginPassword(e.target.value);
-      setPasswordError("");
-    }}
+    type={showConfirmPassword ? "text" : "password"}
+    placeholder="Nhập lại mật khẩu"
+    value={confirmPassword}
+    onChange={(e) => setConfirmPassword(e.target.value)}
     style={{ width: "100%" }}
   />
 
   <span
-    onClick={() => setShowLoginPassword(!showLoginPassword)}
+    onClick={() => setShowConfirmPassword(!showConfirmPassword)}
     style={{
       position: "absolute",
       right: "15px",
@@ -384,7 +381,7 @@ if (!cleanEmail) {
       fontSize: "18px"
     }}
   >
-    {showLoginPassword ? "🙈" : "👁️"}
+    {showConfirmPassword ? "🙈" : "👁️"}
   </span>
 </div>
   

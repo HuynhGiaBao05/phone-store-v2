@@ -74,3 +74,8 @@ input {
 .form-container input {
   padding-right: 45px; /* chừa chỗ cho icon */
 }
+.form-container input {
+  width: 100%;
+  padding-right: 45px;
+  box-sizing: border-box;
+}
