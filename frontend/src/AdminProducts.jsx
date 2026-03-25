@@ -18,7 +18,7 @@ function AdminProducts() {
   const [editingProduct, setEditingProduct] = useState(null);
 
   const [preview, setPreview] = useState(null);
-
+  
   const [newProduct, setNewProduct] = useState({
     name: "",
     category: "",
@@ -101,7 +101,7 @@ function AdminProducts() {
     );
 
   }
-
+  
   // ================= DELETE =================
 
   const handleDelete = async (id) => {
