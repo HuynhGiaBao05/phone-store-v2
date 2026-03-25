@@ -48,7 +48,7 @@ function Home() {
     });
   }, [categories]);
 
-  const heroSlides = ["slide1.png", "slide2.png", "slide3.png"];
+  const heroSlides = ["slide1.png", "slide2.png", "slide3.png","slide4.png","slide5.png","slide6.png","slide7.png","slide8.png"];
 
   return (
     <div className="app">

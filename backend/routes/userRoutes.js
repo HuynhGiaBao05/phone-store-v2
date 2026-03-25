@@ -799,7 +799,7 @@ router.get("/approve-login/:token", async (req, res) => {
     `);
 
   } catch (err) {
-    res.send(`
+    res.send(`  
       <script>
         window.close();
       </script>
