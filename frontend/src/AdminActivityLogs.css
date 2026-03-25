@@ -1,0 +1,119 @@
+.admin-logs {
+  padding: 20px;
+  background: #f8fafc;
+}
+
+/* ===== TITLE ===== */
+.page-title {
+  margin-bottom: 15px;
+  font-size: 22px;
+  font-weight: 600;
+}
+
+/* ===== CARD ===== */
+.table-card {
+  background: white;
+  padding: 15px;
+  border-radius: 10px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+/* ===== TABLE ===== */
+.log-table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.log-table th,
+.log-table td {
+  padding: 10px;
+  border-bottom: 1px solid #eee;
+  text-align: left;
+  vertical-align: middle;
+}
+
+/* hover row */
+.log-table tr:hover {
+  background: #f9fafb;
+}
+
+/* fix text dài */
+.log-table td {
+  max-width: 250px;
+  word-break: break-word;
+}
+
+/* ===== EMAIL ===== */
+.email {
+  font-size: 12px;
+  color: #6b7280;
+}
+
+/* ===== ACTION BADGE ===== */
+.log-action {
+  padding: 4px 8px;
+  border-radius: 6px;
+  font-size: 12px;
+  color: white;
+  display: inline-block;
+  font-weight: 600;
+}
+
+/* màu */
+.create {
+  background: #22c55e;
+}
+
+.update {
+  background: #f59e0b;
+}
+
+.delete {
+  background: #ef4444;
+}
+
+/* ===== FILTER + SEARCH ===== */
+.log-actions {
+  display: flex;
+  gap: 10px;
+  margin-bottom: 12px;
+}
+
+.log-actions select,
+.log-search {
+  padding: 6px 10px;
+  border-radius: 6px;
+  border: 1px solid #ccc;
+  outline: none;
+}
+
+.log-actions select:focus,
+.log-search:focus {
+  border-color: #3b82f6;
+}
+
+/* ===== PAGINATION ===== */
+.pagination {
+  display: flex;
+  justify-content: center;
+  gap: 12px;
+  margin-top: 15px;
+}
+
+.pagination button {
+  padding: 6px 12px;
+  border: none;
+  background: #3b82f6;
+  color: white;
+  border-radius: 6px;
+  cursor: pointer;
+}
+
+.pagination button:hover {
+  background: #2563eb;
+}
+
+.pagination button:disabled {
+  background: #ccc;
+  cursor: not-allowed;
+}

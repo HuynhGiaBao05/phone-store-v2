@@ -38,6 +38,9 @@ import Orders from "./Orders";
 import MfaWait from "./MfaWait";
 import { ToastContainer } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
+import AdminSecurityLogs from "./AdminSecurityLogs";
+import AdminActivityLogs from "./AdminActivityLogs";
+
 
 function App() {
   return (
@@ -160,6 +163,36 @@ function App() {
           </ProtectedRoute>
         }
       />
+      <Route
+  path="/admin-users"
+  element={
+    <ProtectedRoute allowedRoles={["ADMIN"]}>
+      <AdminLayout>
+        <AdminUsers />
+      </AdminLayout>
+    </ProtectedRoute>
+  }
+/>
+<Route
+  path="/admin-security-logs"
+  element={
+    <ProtectedRoute allowedRoles={["ADMIN"]}>
+      <AdminLayout>
+        <AdminSecurityLogs />
+      </AdminLayout>
+    </ProtectedRoute>
+  }
+/>
+<Route
+  path="/admin-activity-logs"
+  element={
+    <ProtectedRoute allowedRoles={["ADMIN"]}>
+      <AdminLayout>
+        <AdminActivityLogs />
+      </AdminLayout>
+    </ProtectedRoute>
+  }
+/>
 
       {/* ===== STAFF ===== */}
       <Route

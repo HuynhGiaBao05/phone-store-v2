@@ -9,6 +9,7 @@ const { protect, authorizeRoles } = require("../middleware/authMiddleware");
 
 const fs = require("fs");
 const path = require("path");
+const ActivityLog = require("../models/ActivityLog");
 
 // =====================================================
 // FUNCTION TÍNH GIÁ + AUTO HỦY KM + BADGE SẮP HẾT GIỜ
@@ -104,6 +105,13 @@ router.post(
       });
 
       await product.save();
+
+      // 📝 ACTIVITY LOG: admin thêm sản phẩm
+await ActivityLog.create({
+  user: req.user._id,
+  action: "CREATE_PRODUCT",
+  description: `Thêm sản phẩm ${product.name}`,
+});
 
       res.json({ message: "Product created" });
 
@@ -240,6 +248,13 @@ router.put(
 
       await product.save();
 
+// 📝 ACTIVITY LOG: update sản phẩm
+await ActivityLog.create({
+  user: req.user._id,
+  action: "UPDATE_PRODUCT",
+  description: `Cập nhật sản phẩm ${product.name}`,
+});
+
       res.json({ message: "Product updated" });
 
     } catch (error) {
@@ -271,6 +286,13 @@ router.delete(
       }
 
       await Product.findByIdAndDelete(req.params.id);
+
+// 📝 ACTIVITY LOG: delete sản phẩm
+await ActivityLog.create({
+  user: req.user._id,
+  action: "DELETE_PRODUCT",
+  description: `Xóa sản phẩm ${product.name}`,
+});
 
       res.json({ message: "Product deleted successfully" });
 

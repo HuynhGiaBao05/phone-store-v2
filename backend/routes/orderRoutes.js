@@ -4,7 +4,7 @@ const Order = require("../models/Order");
 const { protect, authorizeRoles } = require("../middleware/authMiddleware");
 const User = require("../models/User");
 const Product = require("../models/Product");
-
+const ActivityLog = require("../models/ActivityLog");
 
 // =====================================================
 // 1️⃣ TẠO ĐƠN HÀNG (USER đặt)
@@ -84,6 +84,13 @@ router.post("/", protect, async (req, res) => {
     });
 
     await order.save();
+
+    // 📝 ACTIVITY LOG: user mua hàng
+await ActivityLog.create({
+  user: req.user._id,
+  action: "CREATE_ORDER",
+  description: `User mua đơn hàng ${order._id}`,
+});
 
     res.json({
       message: "Order created successfully",

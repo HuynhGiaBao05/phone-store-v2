@@ -3,8 +3,10 @@ const router = express.Router();
 const bcrypt = require("bcryptjs");
 const jwt = require("jsonwebtoken");
 const User = require("../models/User");
+const SecurityLog = require("../models/SecurityLog");
 const sendEmail = require("../utils/sendEmail");
 const xss = require("xss"); // 🛡️ XSS: sanitize input
+const ActivityLog = require("../models/ActivityLog");
 
 const crypto = require("crypto");
 // CREATE USER
@@ -132,6 +134,14 @@ const user = await User.findOne({ email: cleanEmail }).select("+password");
       return res.status(403).json({ message: "Try again later" });
     }
 
+// 🛡️ LẤY IP + DEVICE
+const ip =
+  (req.headers["x-forwarded-for"] || "")
+    .split(",")[0]
+    .trim() || req.socket.remoteAddress;
+
+const agent = req.headers["user-agent"];
+
     const isMatch = await bcrypt.compare(password, user.password);
 
     // ❌ WRONG PASSWORD
@@ -144,6 +154,14 @@ const user = await User.findOne({ email: cleanEmail }).select("+password");
       }
 
         await user.save();
+
+      await SecurityLog.create({
+  action: "LOGIN_FAIL",
+  ip,
+  userAgent: req.headers["user-agent"],
+  status: "FAIL",
+  description: "Sai mật khẩu",
+});
       return res.status(400).json({ message: "Invalid email or password" });
     }
 
@@ -155,13 +173,7 @@ const user = await User.findOne({ email: cleanEmail }).select("+password");
 
 const role = user.role?.toUpperCase();
 
-// 🛡️ LẤY IP + DEVICE
-const ip =
-  (req.headers["x-forwarded-for"] || "")
-    .split(",")[0]
-    .trim() || req.socket.remoteAddress;
 
-const agent = req.headers["user-agent"];
 
 // ================= SAVE LOGIN HISTORY =================
 if (!user.loginHistory) {
@@ -220,6 +232,15 @@ if (role === "USER") {
     { expiresIn: "1d" }
   );
 
+// ✅ SECURITY LOG
+await SecurityLog.create({
+  user: user._id,
+  action: "LOGIN_SUCCESS",
+  ip,
+  userAgent: agent,
+  status: "SUCCESS",
+});
+
   return res.json({
     message: "Login successful",
     token,
@@ -251,6 +272,15 @@ if (role === "ADMIN" || role === "STAFF") {
   user.isLoginApproved = false;
 
   await user.save();
+
+  // ✅ SECURITY LOG
+await SecurityLog.create({
+  user: user._id,
+  action: "LOGIN_PENDING",
+  ip,
+  userAgent: agent,
+  status: "PENDING",
+});
 
   const confirmLink = `http://localhost:5000/api/users/approve-login/${loginToken}`;
   const denyLink = `http://localhost:5000/api/users/deny-login/${loginToken}`;
@@ -594,7 +624,24 @@ if (!validateEmail(email)) {
     res.status(500).json({ error: error.message });
   }
 });
+// ================= LOGOUT =================
+router.post("/logout", protect, async (req, res) => {
+  try {
 
+    await SecurityLog.create({
+      user: req.user._id,
+      action: "LOGOUT",
+      ip: req.ip,
+      userAgent: req.headers["user-agent"],
+      status: "SUCCESS",
+    });
+
+    res.json({ message: "Logout success" });
+
+  } catch (err) {
+    res.status(500).json({ message: err.message });
+  }
+});
 // ===============================
 // RESEND OTP
 // ===============================
@@ -782,11 +829,20 @@ router.get("/approve-login/:token", async (req, res) => {
           window.close();
         </script>
       `);
+      
     }
+    
 
     user.isLoginApproved = true;
     user.loginToken = null;
     user.loginTokenExpire = null;
+
+    // ✅ SECURITY LOG: LOGIN SUCCESS
+await SecurityLog.create({
+  user: user._id,
+  action: "LOGIN_SUCCESS",
+  ip: req.ip,
+});
 
     await user.save();
 
@@ -827,7 +883,49 @@ router.get("/deny-login/:token", async (req, res) => {
   } catch {
     res.send("Có lỗi xảy ra");
   }
+
+
+
 });
 
+// ===============================
+// ADMIN - LẤY SECURITY LOG
+// ===============================
+router.get(
+  "/security-logs",
+  protect,
+  authorizeRoles("ADMIN"),
+  async (req, res) => {
+    try {
+      const logs = await SecurityLog.find()
+        .populate("user", "email fullName") // lấy info user
+        .sort({ createdAt: -1 }) // mới nhất lên đầu
+        .limit(50); // giới hạn 50 log
 
+      res.json(logs);
+    } catch (err) {
+      res.status(500).json({ message: err.message });
+    }
+  }
+);
+// ===============================
+// ADMIN - LẤY ACTIVITY LOG
+// ===============================
+router.get(
+  "/activity-logs",
+  protect,
+  authorizeRoles("ADMIN"),
+  async (req, res) => {
+    try {
+      const logs = await ActivityLog.find()
+        .populate("user", "fullName email")
+        .sort({ createdAt: -1 })
+        .limit(100);
+
+      res.json(logs);
+    } catch (err) {
+      res.status(500).json({ message: err.message });
+    }
+  }
+);
 module.exports = router;
