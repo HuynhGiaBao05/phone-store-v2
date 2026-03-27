@@ -2,6 +2,8 @@ const express = require("express");
 const router = express.Router();
 const Cart = require("../models/Cart");
 const { protect } = require("../middleware/authMiddleware");
+const ActivityLog = require("../models/ActivityLog");
+const Product = require("../models/Product");
 
 
 // =====================================================
@@ -62,6 +64,13 @@ router.post("/add", protect, async (req, res) => {
     }
 
     await cart.save();
+        const product = await Product.findById(productId);
+    // 📝 ACTIVITY LOG
+await ActivityLog.create({
+  user: req.user._id,
+  action: "ADD_TO_CART",
+  description: `Thêm ${product?.name} vào giỏ hàng`,
+});
 
     // 🔥 Populate lại trước khi trả về
     const updatedCart = await Cart.findOne({ user: req.user._id })
@@ -106,6 +115,13 @@ router.put("/update", protect, async (req, res) => {
     item.quantity = quantity;
 
     await cart.save();
+    const product = await Product.findById(productId);
+
+await ActivityLog.create({
+  user: req.user._id,
+  action: "UPDATE_CART",
+  description: `Cập nhật số lượng ${product?.name}`,
+});
 
     const updatedCart = await Cart.findOne({ user: req.user._id })
       .populate({
@@ -137,6 +153,13 @@ router.delete("/remove/:productId", protect, async (req, res) => {
     );
 
     await cart.save();
+    const product = await Product.findById(req.params.productId);
+
+await ActivityLog.create({
+  user: req.user._id,
+  action: "REMOVE_FROM_CART",
+  description: `Xóa ${product?.name} khỏi giỏ`,
+});
 
     const updatedCart = await Cart.findOne({ user: req.user._id })
       .populate({

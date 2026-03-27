@@ -25,28 +25,36 @@ router.post("/", protect, async (req, res) => {
 
     let totalAmount = 0;
     const orderItems = [];
+    const productNames = [];
 
     // =====================================================
     // 🔥 KHÔNG TIN FRONTEND → TÍNH LẠI TỪ DATABASE
     // =====================================================
-    for (let item of items) {
+    const products = await Promise.all(
+  items.map(item => Product.findById(item.product))
+);
 
-      const product = await Product.findById(item.product);
+for (let i = 0; i < items.length; i++) {
+  const item = items[i];
+  const product = products[i];
+// ===============================
+      // 🔥 CHECK sp ko tồn tại
+      // ===============================
+  if (!product) {
+  return res.status(404).json({
+    message: "Sản phẩm không tồn tại",
+  });
+}
 
-      if (!product) {
-        return res.status(404).json({
-          message: "Sản phẩm không tồn tại",
-        });
-      }
 
       // ===============================
       // 🔥 CHECK TỒN KHO
       // ===============================
       if (product.stock < item.quantity) {
-        return res.status(400).json({
-          message: `Không đủ tồn kho cho ${product.name}`,
-        });
-      }
+      return res.status(400).json({
+        message: `Không đủ tồn kho cho ${product.name}`,
+      });
+    }
 
       // ===============================
       // 🔥 TÍNH GIÁ THỰC TẾ (CÓ GIẢM GIÁ)
@@ -65,6 +73,8 @@ router.post("/", protect, async (req, res) => {
         quantity: item.quantity,
         price: finalPrice
       });
+        productNames.push(product.name);
+
     }
 
     // ===============================
@@ -84,12 +94,12 @@ router.post("/", protect, async (req, res) => {
     });
 
     await order.save();
-
+    
     // 📝 ACTIVITY LOG: user mua hàng
 await ActivityLog.create({
   user: req.user._id,
   action: "CREATE_ORDER",
-  description: `User mua đơn hàng ${order._id}`,
+  description: `${req.user.email} đặt đơn ${order._id} (${productNames.length} sp: ${productNames.join(", ")})`
 });
 
     res.json({
@@ -162,22 +172,7 @@ router.put(
         });
       }
 
-      // =====================================================
-// 4️⃣ USER - XEM ĐƠN HÀNG CỦA TÔI
-// =====================================================
-router.get("/my-orders", protect, async (req, res) => {
-  try {
-
-    const orders = await Order.find({ user: req.user._id })
-      .populate("items.product", "name image originalPrice")
-      .sort({ createdAt: -1 });
-
-    res.json(orders);
-
-  } catch (error) {
-    res.status(500).json({ error: error.message });
-  }
-});
+     
 
       // =====================================
       // 🔥 TRỪ KHO KHI CONFIRMED
@@ -222,7 +217,22 @@ router.get("/my-orders", protect, async (req, res) => {
 
       order.status = status;
       await order.save();
+      //activity
+      // luôn log update
+await ActivityLog.create({
+  user: req.user._id,
+  action: "UPDATE_ORDER_STATUS",
+  description: `Đổi trạng thái đơn ${order._id} → ${status}`,
+});
 
+// chỉ log cancel khi thật sự cancel
+if (status === "CANCELLED") {
+  await ActivityLog.create({
+    user: req.user._id,
+    action: "CANCEL_ORDER",
+    description: `Hủy đơn ${order._id}`,
+  });
+}
       res.json({ message: "Order status updated successfully" });
 
     } catch (error) {
