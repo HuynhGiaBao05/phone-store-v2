@@ -40,9 +40,16 @@ import { ToastContainer } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
 import AdminSecurityLogs from "./AdminSecurityLogs";
 import AdminActivityLogs from "./AdminActivityLogs";
+import ProductListPage from "./ProductListPage"; 
+import CustomerManagement from "./CustomerManagement";
+import AdminCustomerDetail from "./AdminCustomerDetail";
+import { useNavigate } from "react-router-dom";
+
 
 
 function App() {
+  const navigate = useNavigate();
+
   return (
     <>
       <ScrollToTop />
@@ -65,6 +72,8 @@ function App() {
         <Route path="/login" element={<LoginUser />} />
         <Route path="/profile" element={<Profile />} />
         <Route path="/orders" element={<Orders />} />
+        <Route path="/featured" element={<ProductListPage type="featured" />} />
+<Route path="/sale" element={<ProductListPage type="sale" />} />
 
         {/* 👉 Sau này bạn thêm category page, product detail page cũng để trong đây */}
 
@@ -164,6 +173,26 @@ function App() {
         }
       />
       <Route
+  path="/admin-customers"
+  element={
+    <ProtectedRoute allowedRoles={["ADMIN", "STAFF"]}>
+      <AdminLayout>
+        <CustomerManagement />
+      </AdminLayout>
+    </ProtectedRoute>
+  }
+/>
+<Route
+  path="/admin/customers/:id"
+  element={
+    <ProtectedRoute allowedRoles={["ADMIN", "STAFF"]}>
+      <AdminLayout>
+        <AdminCustomerDetail />
+      </AdminLayout>
+    </ProtectedRoute>
+  }
+/>
+      <Route
   path="/admin-users"
   element={
     <ProtectedRoute allowedRoles={["ADMIN"]}>
@@ -216,6 +245,16 @@ function App() {
           </ProtectedRoute>
         }
       />
+      <Route
+  path="/staff-customers"
+  element={
+    <ProtectedRoute allowedRoles={["STAFF"]}>
+      <StaffLayout>
+        <CustomerManagement />
+      </StaffLayout>
+    </ProtectedRoute>
+  }
+/>
 
         
 

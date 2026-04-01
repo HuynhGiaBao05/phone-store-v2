@@ -1,0 +1,81 @@
+.crm-container {
+  padding: 20px;
+  background: #f5f7fa;
+  min-height: 100vh;
+}
+
+.crm-container h2 {
+  margin-bottom: 20px;
+}
+
+/* FILTER */
+.filter-box {
+  margin-bottom: 15px;
+}
+
+.filter-box select {
+  padding: 8px 12px;
+  border-radius: 6px;
+  border: 1px solid #ccc;
+}
+
+/* TABLE */
+.crm-table {
+  width: 100%;
+  border-collapse: collapse;
+  background: white;
+  border-radius: 10px;
+  overflow: hidden;
+}
+
+.crm-table th,
+.crm-table td {
+  padding: 12px;
+  text-align: left;
+}
+
+.crm-table thead {
+  background: #333;
+  color: white;
+}
+
+.crm-table tr:nth-child(even) {
+  background: #f2f2f2;
+}
+
+/* STATUS */
+.status {
+  padding: 5px 10px;
+  border-radius: 6px;
+  font-weight: bold;
+  color: white;
+}
+
+.status.NEW {
+  background: gray;
+}
+
+.status.CARE {
+  background: orange;
+}
+
+.status.VIP {
+  background: green;
+}
+
+.status.BLOCK {
+  background: red;
+}
+
+/* BUTTON */
+button {
+  margin-right: 5px;
+  padding: 6px 10px;
+  border: none;
+  border-radius: 5px;
+  cursor: pointer;
+}
+
+button:hover {
+  opacity: 0.8;
+}

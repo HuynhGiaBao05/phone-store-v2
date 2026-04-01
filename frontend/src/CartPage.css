@@ -1,196 +1,244 @@
+/* ================= BODY ================= */
 body {
-  background: #f1f3f6;
+    background: #f1f3f6;
 }
 
+/* ================= CART PAGE ================= */
 .cart-page {
-  max-width: 800px;
-  margin: 40px auto 120px;
-  padding: 0 20px;
-  padding-top: 40px;
+    max-width: 700px; /* nhỏ hơn 1 chút */
+    margin: 30px auto 100px;
+    padding: 0 15px;
+    padding-top: 30px;
 }
 
 .cart-title {
-  text-align: center;
-  margin-bottom: 30px;
+    text-align: center;
+    margin-bottom: 25px;
+    font-size: 22px;
+    font-weight: 600;
 }
 
-/* ===== CARD ===== */
+/* ================= CART ITEM ================= */
 .cart-item {
-  display: grid;
-  grid-template-columns: 30px 100px 1fr 40px;
-  gap: 20px;
-
-  background: white;
-  padding: 25px;
-  border-radius: 20px;
-  margin-bottom: 20px;
-  box-shadow: 0 10px 25px rgba(0,0,0,0.05);
+    display: grid;
+    grid-template-columns: 24px 80px 1fr 30px;
+    gap: 15px;
+    background: white;
+    padding: 18px;
+    border-radius: 15px;
+    margin-bottom: 15px;
+    box-shadow: 0 6px 18px rgba(0,0,0,0.04);
 }
 
-/* Checkbox */
+/* ================= CHECKBOX ================= */
 .check-circle {
-  width: 18px;
-  height: 18px;
-  border: 2px solid red;
-  border-radius: 50%;
-  margin-top: 8px;
+    width: 20px;
+    height: 20px;
+    border: 2px solid #e60023;
+    border-radius: 6px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: all 0.25s ease;
 }
 
-/* Image */
+    .check-circle::after {
+        content: "✓";
+        color: white;
+        font-size: 12px;
+        transform: scale(0);
+        transition: transform 0.2s ease;
+    }
+
+    .check-circle.checked {
+        background: #e60023;
+        border-color: #e60023;
+    }
+
+        .check-circle.checked::after {
+            transform: scale(1);
+        }
+
+    .check-circle:hover {
+        transform: scale(1.1);
+    }
+
+/* ================= IMAGE ================= */
 .cart-item img {
-  width: 100px;
-  border-radius: 10px;
+    width: 80px;
+    height: 80px;
+    object-fit: cover;
+    border-radius: 8px;
 }
 
-/* Info */
+/* ================= INFO ================= */
 .item-info h4 {
-  margin: 0 0 10px 0;
-  font-size: 16px;
+    margin: 0 0 6px 0;
+    font-size: 15px;
+    font-weight: 500;
 }
 
 .price-box {
-  margin-bottom: 10px;
+    margin-bottom: 8px;
 }
 
 .new-price {
-  color: red;
-  font-weight: bold;
-  margin-right: 10px;
+    color: red;
+    font-weight: bold;
+    margin-right: 8px;
+    font-size: 14px;
 }
 
 .old-price {
-  text-decoration: line-through;
-  color: #888;
+    text-decoration: line-through;
+    color: #888;
+    font-size: 13px;
 }
 
-/* Qty */
+/* ================= QTY ================= */
 .qty {
-  display: flex;
-  gap: 10px;
-  margin-bottom: 15px;
+    display: flex;
+    gap: 8px;
+    margin-bottom: 10px;
 }
 
-.qty button {
-  width: 28px;
-  height: 28px;
-  border: none;
-  background: #eee;
-  border-radius: 6px;
-  cursor: pointer;
-}
+    .qty button {
+        width: 28px;
+        height: 28px;
+        border: none;
+        background: #e60012;
+        color: white;
+        border-radius: 6px;
+        cursor: pointer;
+        font-size: 16px;
+        font-weight: bold;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        transition: background 0.2s;
+    }
 
-/* Promo */
+        .qty button:hover {
+            background: #c8000f;
+        }
+
+/* ================= PROMO ================= */
 .promo-box {
-  background: #f7f7f7;
-  padding: 15px;
-  border-radius: 15px;
-  font-size: 14px;
+    background: #f7f7f7;
+    padding: 12px;
+    border-radius: 12px;
+    font-size: 13px;
 }
 
-.promo-box ul {
-  margin: 10px 0 0;
-  padding-left: 18px;
-}
+    .promo-box ul {
+        margin: 8px 0 0;
+        padding-left: 16px;
+    }
 
+/* ================= DELETE BUTTON ================= */
 .delete-btn {
-  border: none;
-  background: none;
-  cursor: pointer;
-  font-size: 18px;
-  color: #999;
+    width: 28px;
+    height: 28px;
+    border: none;
+    background: #f44336;
+    color: white;
+    border-radius: 50%;
+    cursor: pointer;
+    font-size: 16px;
+    font-weight: bold;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+transition: transform 0.2s, background 0.2s;
 }
 
-/* ===== BOTTOM BAR ===== */
+    .delete-btn:hover {
+        background: #d32f2f;
+        transform: scale(1.1);
+    }
+
+/* ================= BOTTOM BAR ================= */
 .bottom-bar {
-  position: fixed;
-  bottom: 0;
-  left: 0;
-  right: 0;
-
-  background: white;
-  padding: 20px;
-  box-shadow: 0 -5px 20px rgba(0,0,0,0.05);
-
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    background: white;
+    padding: 15px 20px;
+    box-shadow: 0 -5px 15px rgba(0,0,0,0.04);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
 }
 
 .temp {
-  font-weight: bold;
+    font-weight: bold;
+    font-size: 14px;
 }
 
 .save {
-  color: #0071e3;
-  font-size: 14px;
+    color: #0071e3;
+    font-size: 13px;
 }
 
 .buy-now-btn {
-  background: #e60012;
-  color: white;
-  border: none;
-  padding: 14px 28px;
-  border-radius: 12px;
-  font-weight: bold;
-  cursor: pointer;
+    background: #e60012;
+    color: white;
+    border: none;
+    padding: 12px 24px;
+    border-radius: 10px;
+    font-weight: bold;
+    cursor: pointer;
+    font-size: 14px;
 }
 
-.buy-now-btn:hover {
-  background: #c8000f;
-}
+    .buy-now-btn:hover {
+        background: #c8000f;
+    }
 
-
+/* ================= SELECT ALL ================= */
 .select-all-row {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  margin-bottom: 20px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 15px;
 }
 
 .remove-selected-btn {
-  margin-left: auto;
-  background: none;
-  border: none;
-  color: red;
-  cursor: pointer;
-  font-weight: 500;
+    margin-left: auto;
+    background: none;
+    border: none;
+    color: red;
+    cursor: pointer;
+    font-weight: 500;
+    font-size: 14px;
 }
 
-/* ============================= */
-/* 🔥 CHECKBOX STYLE TOPZONE tích  */
-/* ============================= */
+/* =======================================================
+   🛒 CART ICON BADGE (GIỐNG THẾ GIỚI DI ĐỘNG)
+======================================================= */
 
-.check-circle {
-  width: 22px;
-  height: 22px;
-  border: 2px solid #e60023;
-  border-radius: 6px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  cursor: pointer;
-  transition: all 0.25s ease;
+.cart-icon {
+    position: relative;
+    display: inline-block;
 }
 
-.check-circle::after {
-  content: "✓";
-  color: white;
-  font-size: 14px;
-  transform: scale(0);
-  transition: transform 0.2s ease;
-}
-
-/* Khi được chọn */
-.check-circle.checked {
-  background: #e60023;
-  border-color: #e60023;
-}
-
-.check-circle.checked::after {
-  transform: scale(1);
-}
-
-/* Hover effect */
-.check-circle:hover {
-  transform: scale(1.1);
+.cart-badge {
+    position: absolute;
+    top: -6px;
+    right: -8px;
+    min-width: 16px;
+    height: 16px;
+    padding: 0 4px;
+    background: #ff3b30;
+    color: white;
+    font-size: 10px;
+    font-weight: bold;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    line-height: 1;
+    box-shadow: 0 0 0 2px #fff;
 }

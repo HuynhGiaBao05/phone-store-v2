@@ -65,8 +65,8 @@ async function calculateProductPrice(product) {
     discount: activeDiscount,
     isExpiringSoon, // 🔥 TRẢ VỀ CHO FRONTEND
     image: product.image
-      ? `http://localhost:5000/uploads/${product.image}`
-      : null,
+  ? `http://localhost:5000/uploads/${product.image}`
+  : null,
   };
 }
 
@@ -128,7 +128,7 @@ router.get("/", async (req, res) => {
   try {
 
     const page = parseInt(req.query.page) || 1;
-    const limit = parseInt(req.query.limit) || 5;
+    const limit = parseInt(req.query.limit) || 999;
     const category = req.query.category;
 
     const skip = (page - 1) * limit;
@@ -243,7 +243,7 @@ router.put(
           }
         }
 
-        product.image = req.file.filename;
+          product.images = req.files.map(f => f.filename);
       }
 
       await product.save();

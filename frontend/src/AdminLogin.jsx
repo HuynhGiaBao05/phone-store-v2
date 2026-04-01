@@ -1,7 +1,10 @@
-import { useState } from "react";
 import axios from "axios";
 import { useNavigate } from "react-router-dom";
 import "./login.css";
+import { useEffect, useState } from "react";
+import { toast } from "react-toastify";
+
+
 
 function AdminLogin() {
   const [email, setEmail] = useState("");
@@ -9,6 +12,18 @@ function AdminLogin() {
   const [loading, setLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const navigate = useNavigate();
+
+useEffect(() => {
+  const params = new URLSearchParams(window.location.search);
+  const status = params.get("status");
+
+  if (status === "denied") {
+    alert("Bạn đã từ chối đăng nhập");
+
+    // 🔥 xoá query khỏi URL
+    window.history.replaceState({}, document.title, "/admin-login");
+  }
+}, []);
 
   const handleLogin = async (e) => {
     e.preventDefault();
@@ -28,7 +43,7 @@ const passwordRegex =
   /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[\W_]).{8,}$/;
 
 if (!passwordRegex.test(password)) {
-  alert(
+  toast.error(
     "Mật khẩu phải >=8 ký tự, gồm chữ hoa, chữ thường, số và ký tự đặc biệt"
   );
   setLoading(false);
@@ -43,10 +58,11 @@ if (!passwordRegex.test(password)) {
 
       // 🔥 MFA: nếu cần xác nhận email
 if (res.data.requireApproval) {
-  alert("Vui lòng xác nhận đăng nhập qua email");
+  toast.info("Vui lòng xác nhận đăng nhập qua email");
 
-  navigate(`/mfa-wait?email=${email}`);
+  navigate(`/mfa-wait?token=${res.data.loginToken}`);
   return;
+
 }
 
 // ✅ CHỈ LƯU TOKEN KHI CÓ TOKEN

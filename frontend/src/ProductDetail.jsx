@@ -1,294 +1,243 @@
 import { useEffect, useState } from "react";
-import { useParams } from "react-router-dom";
+import { useParams, useNavigate } from "react-router-dom";
 import axios from "axios";
 import "./ProductDetail.css";
-import { useNavigate } from "react-router-dom";
-// ❌ XÓA LoginRequiredModal
 
 function ProductDetail() {
+    const { id } = useParams();
+    const [product, setProduct] = useState(null);
+    const [timeLeft, setTimeLeft] = useState("");
+    const [selectedImage, setSelectedImage] = useState("");
+    const [loginMessage, setLoginMessage] = useState("");
+    const [errorMessage, setErrorMessage] = useState("");
+    const navigate = useNavigate();
 
-  const { id } = useParams();
-  const [product, setProduct] = useState(null);
-  const [timeLeft, setTimeLeft] = useState("");
-  const navigate = useNavigate();
+    // ✅ THÊM CHECK HẾT HÀNG
+    const isOutOfStock = product?.stock <= 0;
 
-  // ✅ THÊM state thông báo login
-  const [loginMessage, setLoginMessage] = useState("");
+    useEffect(() => {
+        axios
+            .get(`http://localhost:5000/api/products/${id}`)
+            .then((res) => {
+                setProduct(res.data);
+                setSelectedImage(res.data.image);
+            })
+            .catch((err) => {
+                if (err.response?.status === 404) {
+                    setErrorMessage("Sản phẩm không tồn tại");
+                } else {
+                    setErrorMessage("Lỗi khi tải sản phẩm");
+                }
+            });
+    }, [id]);
 
-  // =====================================================
-  // LOAD PRODUCT
-  // =====================================================
-  useEffect(() => {
-    axios
-      .get(`http://localhost:5000/api/products/${id}`)
-      .then((res) => setProduct(res.data))
-      .catch((err) => console.log(err));
-  }, [id]);
-
-  // =====================================================
-  // 🔥 TỰ ẨN THÔNG BÁO SAU 3 GIÂY
-  // =====================================================
-  useEffect(() => {
-    if (loginMessage) {
-      const timer = setTimeout(() => {
-        setLoginMessage("");
-      }, 3000);
-
-      return () => clearTimeout(timer);
-    }
-  }, [loginMessage]);
-
-  // =====================================================
-  // COUNTDOWN KHUYẾN MÃI
-  // =====================================================
-  useEffect(() => {
-    if (!product?.promoEndDate) return;
-
-    const interval = setInterval(() => {
-
-      const now = new Date();
-      const end = new Date(product.promoEndDate);
-      const diff = end - now;
-
-      if (diff <= 0) {
-        setTimeLeft("Đã kết thúc");
-        clearInterval(interval);
-        return;
-      }
-
-      const hours = Math.floor(diff / (1000 * 60 * 60));
-      const minutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
-      const seconds = Math.floor((diff % (1000 * 60)) / 1000);
-
-      setTimeLeft(
-        `${hours.toString().padStart(2, "0")}:` +
-        `${minutes.toString().padStart(2, "0")}:` +
-        `${seconds.toString().padStart(2, "0")}`
-      );
-
-    }, 1000);
-
-    return () => clearInterval(interval);
-  }, [product?.promoEndDate]);
-
-  if (!product) return <div className="loading">Đang tải...</div>;
-
-  const formattedEndDate = product.promoEndDate
-    ? new Date(product.promoEndDate).toLocaleString("vi-VN", {
-        day: "2-digit",
-        month: "2-digit",
-        year: "numeric",
-        hour: "2-digit",
-        minute: "2-digit",
-      })
-    : null;
-
-  // =====================================================
-  // 🛒 THÊM VÀO GIỎ HÀNG
-  // =====================================================
-  const handleAddToCart = async () => {
-
-    const token = localStorage.getItem("token");
-
-    // ❌ CHƯA LOGIN → HIỆN THÔNG BÁO NGAY TẠI TRANG
-    if (!token) {
-      setLoginMessage("Vui lòng đăng nhập để thêm vào giỏ hàng");
-      return;
-    }
-
-    try {
-
-      await axios.post(
-        "http://localhost:5000/api/cart/add",
-        {
-          productId: product._id,
-          quantity: 1
-        },
-        {
-          headers: { Authorization: `Bearer ${token}` }
+    useEffect(() => {
+        if (loginMessage) {
+            const timer = setTimeout(() => setLoginMessage(""), 3000);
+            return () => clearTimeout(timer);
         }
-      );
+    }, [loginMessage]);
 
-      alert("Đã thêm vào giỏ hàng 🛒");
+    // ================= COUNTDOWN =================
+    useEffect(() => {
+        if (!product?.promoEndDate) return;
 
-    } catch (err) {
-      console.log(err);
+        const end = new Date(product.promoEndDate);
+
+        const interval = setInterval(() => {
+            const now = new Date();
+            const diff = end - now;
+
+            if (diff <= 0) {
+                setTimeLeft("00:00:00");
+                clearInterval(interval);
+                return;
+            }
+
+            const hours = Math.floor(diff / (1000 * 60 * 60));
+            const minutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
+            const seconds = Math.floor((diff % (1000 * 60)) / 1000);
+
+            setTimeLeft(
+                `${hours.toString().padStart(2, "0")}:` +
+                `${minutes.toString().padStart(2, "0")}:` +
+                `${seconds.toString().padStart(2, "0")}`
+            );
+        }, 1000);
+
+        return () => clearInterval(interval);
+    }, [product?.promoEndDate]);
+
+    if (errorMessage) return <div>{errorMessage}</div>;
+    if (!product) return <div>Đang tải...</div>;
+
+    let endDateText = "";
+    if (product?.promoEndDate) {
+        const end = new Date(product.promoEndDate);
+        endDateText =
+            end.getHours().toString().padStart(2, "0") + ":" +
+            end.getMinutes().toString().padStart(2, "0") + " " +
+            end.toLocaleDateString("vi-VN") +
+            " · TP.HCM";
     }
-  };
 
-  // =====================================================
-  // 🔥 MUA NGAY
-  // =====================================================
-  const handleBuyNow = async () => {
+    // ================= ADD TO CART =================
+    const handleAddToCart = async () => {
 
-    const token = localStorage.getItem("token");
+        // ❌ HẾT HÀNG
+        if (isOutOfStock) {
+            setErrorMessage("❌ Sản phẩm đã hết hàng");
+return;
+        }
 
-    if (!token) {
-      setLoginMessage("Vui lòng đăng nhập để mua sản phẩm");
-      return;
-    }
+        const token = localStorage.getItem("token");
+        if (!token) {
+            setLoginMessage("Vui lòng đăng nhập để thêm vào giỏ hàng");
+            return;
+        }
 
-    await handleAddToCart();
-    navigate("/cart");
-  };
+        try {
+            await axios.post(
+                "http://localhost:5000/api/cart/add",
+                { productId: product._id, quantity: 1 },
+                { headers: { Authorization: `Bearer ${token}` } }
+            );
 
-  return (
-    <div className="product-detail-page">
-      <div className="detail-container">
+            window.dispatchEvent(new Event("cartUpdated"));
+            alert("Đã thêm vào giỏ hàng 🛒");
 
-        {/* ================= LEFT: IMAGE ================= */}
-        <div className="detail-left">
-          <div className="main-image">
-            <img src={product.image} alt={product.name} />
-          </div>
+        } catch (err) {
+            console.log(err);
+        }
+    };
 
-          <div className="thumbnail-row">
-            <img src={product.image} alt="" />
-            <img src={product.image} alt="" />
-            <img src={product.image} alt="" />
-          </div>
+    const handleBuyNow = async () => {
+
+        // ❌ HẾT HÀNG
+        if (isOutOfStock) {
+            setErrorMessage("❌ Sản phẩm đã hết hàng");
+            return;
+        }
+
+        const token = localStorage.getItem("token");
+        if (!token) {
+            setLoginMessage("Vui lòng đăng nhập để mua sản phẩm");
+            return;
+        }
+
+        await handleAddToCart();
+        navigate("/cart");
+    };
+
+    return (
+        <div className="product-detail-page">
+            <div className="detail-container">
+
+                {/* LEFT */}
+                <div className="detail-left">
+                    <div className="main-image">
+                        <img src={selectedImage} alt={product.name} />
+                    </div>
+
+                    <div className="thumbnail-row">
+                        {[product.image, product.image, product.image].map((img, index) => (
+                            <img
+                                key={index}
+                                src={img}
+                                alt=""
+                                className={selectedImage === img ? "active" : ""}
+                                onClick={() => setSelectedImage(img)}
+                            />
+                        ))}
+                    </div>
+                </div>
+
+                {/* RIGHT */}
+                <div className="detail-right">
+
+                    <h1 className="product-title">{product.name}</h1>
+
+                    {/* ✅ THÔNG BÁO HẾT HÀNG */}
+                    {isOutOfStock && (
+                        <div style={{ color: "red", fontWeight: "bold", marginBottom: 10 }}>
+                            ❌ Sản phẩm đã hết hàng
+                        </div>
+                    )}
+
+                    {product.isExpiringSoon && (
+                        <div className="expiring-badge">🔥 Sắp hết giờ</div>
+                    )}
+
+                    <div className="price-highlight-box">
+
+                        <div className="price-left">
+
+                            {product.discount > 0 ? (
+                                <>
+                                    <span className="price-label">Online Giá Rẻ Quá</span>
+
+                                    <span className="new-price">
+{product.price?.toLocaleString()}đ
+                                    </span>
+
+                                    <span className="old-price">
+                                        {product.originalPrice?.toLocaleString()}đ
+                                    </span>
+                                </>
+                            ) : (
+                                <>
+                                    <span className="price-label">Giá sản phẩm</span>
+
+                                    <span className="new-price">
+                                        {product.originalPrice?.toLocaleString()}đ
+                                    </span>
+                                </>
+                            )}
+
+                            <span className="vat-note">Giá đã bao gồm VAT</span>
+                        </div>
+
+                        {product.discount > 0 && (
+                            <div className="price-right">
+                                <div className="countdown-label">Kết thúc sau:</div>
+                                <div className="countdown-time">{timeLeft}</div>
+                                <div className="countdown-date">{endDateText}</div>
+                            </div>
+                        )}
+
+                    </div>
+
+                    <div className="button-group">
+
+                        <button
+                            className="installment"
+                            onClick={handleAddToCart}
+                            disabled={isOutOfStock}
+                        >
+                            🛒 Thêm vào giỏ
+                        </button>
+
+                        <button
+                            className="buy-now"
+                            onClick={handleBuyNow}
+                            disabled={isOutOfStock}
+                        >
+                            MUA NGAY {product.discount > 0
+                                ? product.price?.toLocaleString()
+                                : product.originalPrice?.toLocaleString()}đ
+                        </button>
+                    </div>
+
+                    <div className="product-description">
+                        <h3>Mô tả sản phẩm</h3>
+                        <p>{product.description}</p>
+                    </div>
+                    
+                </div>
+
+            </div>
         </div>
-
-        {/* ================= RIGHT: INFO ================= */}
-        <div className="detail-right">
-
-          <h1 className="product-title">{product.name}</h1>
-
-          {/* ================= LOGIN MODAL ================= */}
-{loginMessage && (
-  <div className="login-modal-overlay">
-
-    <div className="login-modal">
-
-      <h3>🔒 Yêu cầu đăng nhập</h3>
-
-      <p>{loginMessage}</p>
-
-      <div className="login-modal-buttons">
-
-        {/* Nút đóng */}
-        <button
-          className="btn-cancel"
-          onClick={() => setLoginMessage("")}
-        >
-          Đóng
-        </button>
-
-        {/* Nút đăng nhập */}
-        <button
-          className="btn-login"
-          onClick={() => navigate("/login")}
-        >
-          Đăng nhập ngay
-        </button>
-
-      </div>
-
-    </div>
-  </div>
-)}
-
-          {product.isExpiringSoon && (
-            <div className="expiring-badge">
-              🔥 Sắp hết giờ
-            </div>
-          )}
-
-          {/* ===== BOX GIÁ ===== */}
-          {product.discount > 0 ? (
-            <div className="promo-highlight-box">
-              <div className="promo-left">
-                <div className="promo-label">
-                  Online Giá Rẻ Quá
-                </div>
-                <div className="promo-price">
-                  {product.price?.toLocaleString()}đ
-                </div>
-                <div className="promo-original">
-                  {product.originalPrice?.toLocaleString()}đ
-                </div>
-                <div className="vat-note">
-                  Giá đã bao gồm VAT
-                </div>
-              </div>
-
-              <div className="promo-right">
-                <div className="countdown-label">
-                  Kết thúc sau
-                </div>
-                <div className="countdown-time">
-                  {timeLeft}
-                </div>
-
-                {formattedEndDate && (
-                  <div className="countdown-meta">
-                    {formattedEndDate} • TP.HCM
-                  </div>
-                )}
-              </div>
-            </div>
-          ) : (
-            <div className="price-highlight-box">
-              <span className="new-price">
-                {product.price?.toLocaleString()}đ
-              </span>
-              <div className="vat-note">
-                Giá đã bao gồm VAT
-              </div>
-            </div>
-          )}
-
-          {/* ===== KHUYẾN MÃI ===== */}
-          {product.promotion && product.promotion.trim() !== "" && (
-            <div className="promotion-box">
-              <h3>Khuyến mãi</h3>
-              <ul>
-                {product.promotion.split("\n").map((item, index) => (
-                  <li key={index}>{item}</li>
-                ))}
-              </ul>
-            </div>
-          )}
-
-          {/* ===== BUTTONS ===== */}
-          <div className="button-group">
-
-            <button
-              className="installment"
-              onClick={handleAddToCart}
-            >
-              🛒 Thêm vào giỏ
-            </button>
-
-            <button
-              className="buy-now"
-              onClick={handleBuyNow}
-            >
-              MUA NGAY {product.price?.toLocaleString()}đ
-            </button>
-
-          </div>
-
-          {/* ===== MÔ TẢ ===== */}
-          <div className="product-description">
-            <h3>Mô tả sản phẩm</h3>
-            <p>{product.description}</p>
-          </div>
-
-
-        </div>
-
-        
-      </div>
-
-
-
-    </div>
-    
-  );
-
+    );
 }
-
-
 
 export default ProductDetail;

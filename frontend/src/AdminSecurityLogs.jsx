@@ -28,7 +28,7 @@ function AdminSecurityLogs() {
           },
         }
       );
-      setLogs(res.data);
+      setLogs(res.data.data || res.data || []);
     } catch (err) {
       console.log(err);
     }

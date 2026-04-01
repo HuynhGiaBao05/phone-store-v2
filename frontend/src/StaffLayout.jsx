@@ -24,6 +24,12 @@ function StaffLayout({ children }) {
         >
           🧾 Đơn hàng
         </Link>
+        <Link
+          to="/staff-customers"
+          className={location.pathname.includes("customers") ? "active" : ""}
+        >
+          👥 Khách hàng
+        </Link>
 
       </aside>
 

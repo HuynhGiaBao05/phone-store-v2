@@ -8,30 +8,33 @@ import { toast } from "react-toastify";
 function MfaWait() {
   const navigate = useNavigate();
   const query = new URLSearchParams(useLocation().search);
-  const email = query.get("email");
+  const token = query.get("token");
+
+
 
   useEffect(() => {
-  if (!email) {
-    navigate("/login", { replace: true });
-    return;
+  if (!token) {
+    navigate("/admin-login", { replace: true });
+        return;
   }
 
   const timeout = setTimeout(() => {
-    alert("Hết thời gian xác nhận");
-    navigate("/login");
+    toast.warning("Hết thời gian xác nhận ⏰");
+    navigate("/admin-login");
   }, 5 * 60 * 1000);
 
   const interval = setInterval(async () => {
     try {
       const res = await axios.get(
-        `http://localhost:5000/api/users/check-login-approved/${email}`
+        `http://localhost:5000/api/users/check-login-approved-token/${token}`
       );
 
-     if (res.data.approved) {
+      // ✅ APPROVED
+if (res.data.approved) {
   clearInterval(interval);
   clearTimeout(timeout);
 
-  toast.success("Xác thực thành công ✅"); // 🔥 ADD
+  toast.success("Xác thực thành công ✅");
 
   localStorage.setItem("adminToken", res.data.token);
   localStorage.setItem("adminRole", res.data.role);
@@ -42,17 +45,52 @@ function MfaWait() {
     } else {
       navigate("/staff-products", { replace: true });
     }
-  }, 1500); // delay để thấy toast
+  }, 1500);
 
+  return; // 🔥 BẮT BUỘC
+}
+
+// ⏰ EXPIRED
+if (res.data.expired) {
+  clearInterval(interval);
+  clearTimeout(timeout);
+
+  toast.warning("Link xác nhận đã hết hạn ⏰");
+  navigate("/admin-login", { replace: true });
+  return;
+}
+
+// ❌ DENIED
+if (res.data.denied) {
+  clearInterval(interval);
+  clearTimeout(timeout);
+
+  toast.error("Bạn đã từ chối đăng nhập ❌");
+  navigate("/admin-login", { replace: true });
+  return;
+}
       }
-    } catch (err) {}
-  }, 5000);
+
+     catch (err) {
+  // 🔥 FIX 429 (Too Many Requests)
+  if (err.response?.status === 429) {
+    // đang chờ user xác nhận email → bỏ qua
+    return;
+  }
+
+  console.error(err);
+}
+  }, 3000);
 
   return () => {
     clearInterval(interval);
     clearTimeout(timeout);
   };
-}, [email, navigate]);
+}, [token, navigate]);
+
+  
+
+  
 
   return (
     <div className="mfa-container">

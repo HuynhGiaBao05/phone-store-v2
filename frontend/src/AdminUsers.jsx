@@ -21,10 +21,15 @@ function AdminUsers() {
   // ===============================
   // FILTER USERS
   // ===============================
-  const filteredUsers = users.filter((u) =>
-    u.fullName.toLowerCase().includes(search.toLowerCase()) ||
-    u.email.toLowerCase().includes(search.toLowerCase())
-  );
+  console.log("USERS DATA:", users);
+
+const safeUsers = Array.isArray(users) ? users : [];
+
+const filteredUsers = safeUsers.filter((u) =>
+  u.fullName?.toLowerCase().includes(search.toLowerCase()) ||
+  u.email?.toLowerCase().includes(search.toLowerCase())
+);
+  
 
   // ===============================
   // PAGINATION
@@ -64,8 +69,7 @@ function AdminUsers() {
         }
       );
 
-      setUsers(res.data);
-
+      setUsers(res.data.users || res.data.data || res.data || []);
     } catch (err) {
 
       console.log("Lỗi khi lấy danh sách user:", err);
@@ -325,6 +329,41 @@ function AdminUsers() {
       </div>
 
       <ToastContainer position="top-right" autoClose={3000} />
+      {showModal && (
+  <div className="modal">
+    <div className="modal-content">
+      <h3>Tạo nhân viên</h3>
+
+      <input
+        placeholder="Họ tên"
+        value={newUser.fullName}
+        onChange={(e) =>
+          setNewUser({ ...newUser, fullName: e.target.value })
+        }
+      />
+
+      <input
+        placeholder="Email"
+        value={newUser.email}
+        onChange={(e) =>
+          setNewUser({ ...newUser, email: e.target.value })
+        }
+      />
+
+      <input
+        type="password"
+        placeholder="Mật khẩu"
+        value={newUser.password}
+        onChange={(e) =>
+          setNewUser({ ...newUser, password: e.target.value })
+        }
+      />
+
+      <button onClick={createUser}>Tạo</button>
+      <button onClick={() => setShowModal(false)}>Hủy</button>
+    </div>
+  </div>
+)}
     </div>
   );
 }

@@ -146,6 +146,9 @@ const brandRoutes = require("./routes/brandRoutes");
 const cartRoutes = require("./routes/cartRoutes");
 const reportRoutes = require("./routes/reportRoutes");
 const storeRoutes = require("./routes/storeRoutes");
+const customerRoutes = require("./routes/customerRoutes");
+
+
 
 app.use("/api/categories", categoryRoutes);
 app.use("/api/users", userRoutes);
@@ -155,6 +158,7 @@ app.use("/api/brands", brandRoutes);
 app.use("/api/cart", cartRoutes);
 app.use("/api/report", reportRoutes);
 app.use("/api/stores", storeRoutes);
+app.use("/api/customers", customerRoutes);
 
 
 // =====================================================

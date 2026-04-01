@@ -83,7 +83,11 @@ loginHistory: {
   lockUntil: {
     type: Date
   },
-
+loginStatus: {
+  type: String,
+  enum: ["PENDING", "APPROVED", "DENIED"],
+  default: null
+},
   // =========================
   // 🔢 OTP SYSTEM
   // =========================

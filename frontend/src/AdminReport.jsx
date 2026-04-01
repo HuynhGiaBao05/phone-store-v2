@@ -8,6 +8,7 @@ import {
   YAxis,
   Tooltip,
   ResponsiveContainer,
+  LabelList
 } from "recharts";
 
 function AdminReport() {
@@ -54,10 +55,11 @@ function AdminReport() {
       // ⭐ map dữ liệu từ backend
       res.data?.forEach(item => {
 
-        const monthIndex = Number(item._id) - 1;
+          const monthIndex = parseInt(item._id?.month || item._id) - 1;
 
         if (monthIndex >= 0 && monthIndex < 12) {
-          months[monthIndex].revenue = item.totalRevenue;
+          months[monthIndex].revenue =
+  item.totalRevenue || item.revenue || 0;
         }
 
       });
@@ -96,10 +98,11 @@ function AdminReport() {
 
       res.data?.forEach(item => {
 
-        const monthIndex = Number(item._id) - 1;
+        const monthIndex = parseInt(item._id?.month || item._id) - 1;
 
         if (monthIndex >= 0 && monthIndex < 12) {
-          months[monthIndex].orders = item.totalOrders;
+          months[monthIndex].orders =
+  item.totalOrders || item.orders || 0;
         }
 
       });
@@ -243,16 +246,25 @@ function AdminReport() {
 
         <ResponsiveContainer width="100%" height={300}>
 
-          <BarChart data={monthlyRevenue}>
+          <BarChart
+  data={monthlyRevenue}
+  margin={{ top: 60, right: 20, left: 20, bottom: 5 }}
+
+>
 
             <XAxis dataKey="month" />
 
-            <YAxis />
+            <YAxis domain={[0, "dataMax * 1.2"]} />
 
             <Tooltip />
+            <Bar dataKey="revenue" fill="#3b82f6">
+  <LabelList dataKey="revenue" position="top" />
+</Bar>
 
             {/* ⭐ chart revenue */}
-            <Bar dataKey="revenue" fill="#3b82f6" />
+            <Bar dataKey="revenue" fill="#3b82f6" minPointSize={10}>
+  <LabelList dataKey="revenue" position="top" />
+</Bar>
 
           </BarChart>
 
@@ -270,16 +282,24 @@ function AdminReport() {
 
         <ResponsiveContainer width="100%" height={300}>
 
-          <BarChart data={monthlyOrders}>
+          <BarChart
+  data={monthlyOrders}
+  margin={{ top: 40, right: 20, left: 20, bottom: 5 }}
+>
 
             <XAxis dataKey="month" />
 
             <YAxis />
 
             <Tooltip />
+            <Bar dataKey="orders" fill="#10b981">
+  <LabelList dataKey="orders" position="top" />
+</Bar>
 
             {/* ⭐ chart orders */}
-            <Bar dataKey="orders" fill="#10b981" />
+            <Bar dataKey="orders" fill="#10b981" minPointSize={10}>
+  <LabelList dataKey="orders" position="top" />
+</Bar>
 
           </BarChart>
 

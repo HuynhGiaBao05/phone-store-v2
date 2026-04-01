@@ -35,7 +35,7 @@ password = String(password);
 role = role ? String(role).toUpperCase() : "USER";
 
 // 🛡️ ROLE VALIDATION 
-const allowedRoles = ["USER", "ADMIN"];
+const allowedRoles = ["USER", "ADMIN","STAFF"];
 if (!allowedRoles.includes(role)) {
   return res.status(400).json({ message: "Invalid role" });
 }
@@ -54,7 +54,10 @@ if (!email) {
 }
 
 if (!validateEmail(email)) {
-  return res.status(400).json({ message: "Email không hợp lệ" });
+  res.status(400).json({
+  success: false,
+  error: "Email không hợp lệ"
+});
 }
       const cleanEmail = email.trim().toLowerCase();
     const existingUser = await User.findOne({ email: cleanEmail });
@@ -83,7 +86,15 @@ await user.save();
 
 
 
-    res.json({ message: "User created successfully" });
+    res.json({
+  success: true,
+  total: 1,
+  data: {
+    id: user._id,
+    email: user.email,
+    role: user.role
+  }
+});
   } catch (error) {
     res.status(500).json({ error: error.message });
   }
@@ -108,7 +119,10 @@ if (!email || !password) {
 }
 
 if (!validateEmail(email)) {
-  return res.status(400).json({ message: "Email không hợp lệ" });
+  res.status(400).json({
+  success: false,
+  error: "Email không hợp lệ"
+});
 }
 if (typeof email !== "string" || typeof password !== "string") {
   return res.status(400).json({ message: "Invalid input type" });
@@ -116,22 +130,25 @@ if (typeof email !== "string" || typeof password !== "string") {
     const cleanEmail = email.trim().toLowerCase();
 const user = await User.findOne({ email: cleanEmail }).select("+password");
     if (!user) {
-      return res.status(400).json({ message: "Invalid email or password" });
+      return res.status(400).json({ success: false, message: "Invalid email or password" });
     }
 
     // 🛡️ USE ACCOUNT STATUS
     if (!user.isActive) {
-      return res.status(403).json({ message: "Account locked" });
+      return res.status(403).json({
+        success: false,
+        type: "Account locked"
+      });
     }
 
     // 🛡️ USE VERIFY CHECK
     if (user.role === "USER" && !user.isVerified) {
-      return res.status(403).json({ message: "Please verify account" });
+      return res.status(403).json({ success: false, message: "Please verify account" });
     }
 
     // 🛡️ USE BRUTE FORCE PROTECTION
     if (user.lockUntil && user.lockUntil > Date.now()) {
-      return res.status(403).json({ message: "Try again later" });
+      return res.status(403).json({ success: false, message: "Try again later" });
     }
 
 // 🛡️ LẤY IP + DEVICE
@@ -162,7 +179,7 @@ const agent = req.headers["user-agent"];
   status: "FAIL",
   description: "Sai mật khẩu",
 });
-      return res.status(400).json({ message: "Invalid email or password" });
+      return res.status(400).json({ success: false, message: "Invalid email or password" });
     }
 
     // ✅ LOGIN SUCCESS
@@ -242,34 +259,46 @@ await SecurityLog.create({
 });
 
   return res.json({
-    message: "Login successful",
+  success: true,
+  total: 1,
+  data: {
     token,
-    role: user.role
-  });
+    user: {
+      id: user._id,
+      role: user.role
+    }
+  }
+});
 }
 
 // ================= ADMIN / STAFF → MFA CHẶN LOGIN =================
 if (role === "ADMIN" || role === "STAFF") {
 
   // 🔥 nếu token còn hạn → chặn spam
-  if (user.loginTokenExpire && user.loginTokenExpire > Date.now()) {
+  if (
+  user.loginStatus === "PENDING" &&
+  user.loginTokenExpire > Date.now()
+) {
     return res.status(429).json({
-      message: "Đã gửi xác nhận, kiểm tra email"
+      success: true,
+      type: "Đã gửi xác nhận, kiểm tra email"
     });
   }
 
   // 🔥 nếu token hết hạn → reset
   if (user.loginTokenExpire && user.loginTokenExpire <= Date.now()) {
-    user.loginToken = null;
     user.loginTokenExpire = null;
     user.isLoginApproved = false;
+    user.loginStatus = null;
   }
 
   const loginToken = crypto.randomBytes(32).toString("hex");
 
   user.loginToken = loginToken;
-  user.loginTokenExpire = Date.now() + 5 * 60 * 1000;
+  user.loginTokenExpire = Date.now() + 30 * 1000;
   user.isLoginApproved = false;
+
+  user.loginStatus = "PENDING";
 
   await user.save();
 
@@ -318,6 +347,7 @@ await SecurityLog.create({
 
   return res.json({
     requireApproval: true,
+    loginToken,
     message: "Vui lòng xác nhận email"
   });
 }
@@ -353,7 +383,10 @@ if (!email) {
   return res.status(400).json({ message: "Email is required" });
 }
 if (!validateEmail(email)) {
-  return res.status(400).json({ message: "Email không hợp lệ" });
+  return res.status(400).json({
+    success: false,
+    error: "Email không hợp lệ"
+  });
 }
 // ✅ FIX: chống spam gửi OTP liên tục
 const cleanEmail = email.trim().toLowerCase();
@@ -386,7 +419,11 @@ if (user.otpCooldown && user.otpCooldown > Date.now()) {
       `Your password reset OTP is: ${otp}`
     );
 
-    res.json({ message: "Reset OTP sent to email" });
+   res.json({
+  success: true,
+  total: 1,
+  type: "OTP_SENT"
+});
 
   } catch (error) {
     res.status(500).json({ error: error.message });
@@ -415,7 +452,10 @@ if (!email) {
 
 
 if (!validateEmail(email)) {
-  return res.status(400).json({ message: "Email không hợp lệ" });
+  return res.status(400).json({
+    success: false,
+    error: "Email không hợp lệ"
+  });
 }
     const cleanEmail = email.trim().toLowerCase();
     const user = await User.findOne({ email: cleanEmail });
@@ -443,7 +483,10 @@ if (!newPassword || !validatePassword(newPassword)) {
 
     await user.save();
 
-    res.json({ message: "Password reset successfully" });
+    res.json({
+  success: true,
+  type: "PASSWORD_RESET"
+});
 
   } catch (error) {
     res.status(500).json({ error: error.message });
@@ -461,34 +504,49 @@ router.get("/check-login-approved/:email", async (req, res) => {
     }
 
     const cleanEmail = email.trim().toLowerCase();
+
+    // ✅ THÊM DÒNG NÀY (QUAN TRỌNG NHẤT)
     const user = await User.findOne({ email: cleanEmail });
 
-    if (!user) return res.json({ approved: false });
+    if (!user) {
+  return res.json({ approved: false });
+}
 
-    if (user.isLoginApproved) {
-      const token = jwt.sign(
-        { id: user._id, role: user.role },
-        process.env.JWT_SECRET,
-        { expiresIn: "1d" }
-      );
+    // ✅ APPROVED
+if (user.loginStatus === "APPROVED") {
+  const token = jwt.sign(
+    { id: user._id, role: user.role },
+    process.env.JWT_SECRET,
+    { expiresIn: "1d" }
+  );
 
-      user.isLoginApproved = false;
-      user.loginToken = null;
-      user.loginTokenExpire = null;
+  user.loginStatus = null;
+  user.loginToken = null; // 🔥 QUAN TRỌNG
+  user.loginTokenExpire = null;
+  await user.save();
 
-      await user.save();
+  return res.json({
+    approved: true,
+    token,
+    role: user.role
+  });
+}
 
-      return res.json({
-        approved: true,
-        token,
-        role: user.role
-      });
-    }
+// ❌ DENIED
+if (user.loginStatus === "DENIED") {
+  user.loginStatus = null;        // 🔥 reset
+  user.loginToken = null;         // 🔥 chắc cú
+  user.loginTokenExpire = null;   // 🔥 đồng bộ
+  await user.save();
 
-    res.json({ approved: false });
+  return res.json({ denied: true });
+}
+
+    // ⏳ CHƯA XÁC NHẬN
+    return res.json({ approved: false });
 
   } catch (err) {
-    res.status(500).json({ approved: false });
+    return res.status(500).json({ approved: false });
   }
 });
 
@@ -522,7 +580,10 @@ if (!email) {
 }
 
 if (!validateEmail(email)) {
-  return res.status(400).json({ message: "Email không hợp lệ" });
+  return res.status(400).json({
+    success: false,
+    error: "Email không hợp lệ"
+  });
 }
     const cleanEmail = email.trim().toLowerCase();
 
@@ -561,8 +622,9 @@ const hashedPassword = await bcrypt.hash(password, 10);
     );
 
     res.json({
-      message: "OTP sent to your email"
-    });
+  success: true,
+  type: "REGISTER_OTP_SENT"
+});
 
   } catch (error) {
     console.log("REGISTER ERROR:", error);
@@ -588,7 +650,10 @@ if (!email) {
 }
 
 if (!validateEmail(email)) {
-  return res.status(400).json({ message: "Email không hợp lệ" });
+  return res.status(400).json({
+    success: false,
+    error: "Email không hợp lệ"
+  });
 }
     const cleanEmail = email.trim().toLowerCase();
     const user = await User.findOne({ email: cleanEmail });
@@ -618,7 +683,10 @@ if (!validateEmail(email)) {
 
     await user.save();
 
-    res.json({ message: "Account verified successfully" });
+    res.json({
+  success: true,
+  type: "ACCOUNT_VERIFIED"
+});
 
   } catch (error) {
     res.status(500).json({ error: error.message });
@@ -636,7 +704,10 @@ router.post("/logout", protect, async (req, res) => {
       status: "SUCCESS",
     });
 
-    res.json({ message: "Logout success" });
+    res.json({
+  success: true,
+  type: "LOGOUT"
+});
 
   } catch (err) {
     res.status(500).json({ message: err.message });
@@ -662,7 +733,10 @@ if (!email) {
 }
 
 if (!validateEmail(email)) {
-  return res.status(400).json({ message: "Email không hợp lệ" });
+  return res.status(400).json({
+    success: false,
+    error: "Email không hợp lệ"
+  });
 }
 
 const cleanEmail = email.trim().toLowerCase();
@@ -715,7 +789,11 @@ router.get(
   async (req, res) => {
     try {
       const users = await User.find().select("-password");
-      res.json(users);
+      res.json({
+  success: true,
+  total: users.length,
+  data: users
+});
     } catch (err) {
       res.status(500).json({ message: err.message });
     }
@@ -761,7 +839,7 @@ router.put(
 let { role } = req.body;
 role = String(role).toUpperCase();
 
-const allowedRoles = ["USER", "ADMIN"];
+const allowedRoles = ["USER", "ADMIN","STAFF"];
 if (!allowedRoles.includes(role)) {
   return res.status(400).json({ message: "Invalid role" });
 }
@@ -806,8 +884,10 @@ router.delete(
       await user.deleteOne();
 
       res.json({
-        message: "User deleted successfully"
-      });
+  success: true,
+  total: 1,
+  type: "USER_DELETED"
+});
 
     } catch (err) {
       res.status(500).json({
@@ -834,8 +914,10 @@ router.get("/approve-login/:token", async (req, res) => {
     
 
     user.isLoginApproved = true;
-    user.loginToken = null;
-    user.loginTokenExpire = null;
+user.loginStatus = "APPROVED";
+
+
+
 
     // ✅ SECURITY LOG: LOGIN SUCCESS
 await SecurityLog.create({
@@ -846,13 +928,11 @@ await SecurityLog.create({
 
     await user.save();
 
-    // 🔥 QUAN TRỌNG: auto đóng tab
-    res.send(`
-      <script>
-        window.open('', '_self');
-        window.close();
-      </script>
-    `);
+   res.send(`
+  <h2>✅ Xác thực thành công</h2>
+  <p>Bạn có thể đóng tab này</p>
+  
+`);
 
   } catch (err) {
     res.send(`  
@@ -870,7 +950,10 @@ router.get("/deny-login/:token", async (req, res) => {
 
     if (user) {
       user.isLoginApproved = false;
-      user.loginToken = null;
+
+        user.loginStatus = "DENIED";
+        user.loginTokenExpire = null;  
+        user.loginToken = null; 
 
       if (user.role === "USER") {
         user.isActive = false;
@@ -879,7 +962,12 @@ router.get("/deny-login/:token", async (req, res) => {
       await user.save();
     }
 
-    res.send("Đã từ chối đăng nhập");
+    res.send(`
+  <h3>Đã từ chối đăng nhập</h3>
+  <script>
+    window.close();
+  </script>
+`);
   } catch {
     res.send("Có lỗi xảy ra");
   }
@@ -902,7 +990,11 @@ router.get(
         .sort({ createdAt: -1 }) // mới nhất lên đầu
         .limit(50); // giới hạn 50 log
 
-      res.json(logs);
+      res.json({
+  success: true,
+  total: logs.length,
+  data: logs
+});
     } catch (err) {
       res.status(500).json({ message: err.message });
     }
@@ -922,10 +1014,65 @@ router.get(
         .sort({ createdAt: -1 })
         .limit(100);
 
-      res.json(logs);
+      res.json({
+  success: true,
+  total: logs.length,
+  data: logs
+});
     } catch (err) {
       res.status(500).json({ message: err.message });
     }
   }
 );
+// ================= CHECK LOGIN APPROVED BY TOKEN =================
+router.get("/check-login-approved-token/:token", async (req, res) => {
+  try {
+    const user = await User.findOne({ loginToken: req.params.token });
+
+  if (!user) {
+  return res.json({ approved: false });
+}
+
+// 🔥 token hết hạn
+if (user.loginTokenExpire && user.loginTokenExpire < Date.now()) {
+  return res.json({ expired: true }); // 👈 tách riêng
+}
+
+    // ✅ APPROVED
+if (user.loginStatus === "APPROVED") {
+  const token = jwt.sign(
+    { id: user._id, role: user.role },
+    process.env.JWT_SECRET,
+    { expiresIn: "1d" }
+  );
+  user.loginToken = null;
+  user.loginTokenExpire = null;
+
+  user.loginStatus = null;
+  await user.save();
+
+  return res.json({
+    approved: true,
+    token,
+    role: user.role
+  });
+}
+
+// ❌ DENIED
+if (user.loginStatus === "DENIED") {
+  user.loginStatus = null;        // 🔥 reset trạng thái
+  user.loginToken = null;         // 🔥 xóa token
+  user.loginTokenExpire = null;   // 🔥 clear expire
+  await user.save();
+
+  return res.json({ denied: true });
+}
+
+    // ⏳ CHƯA XÁC NHẬN
+    return res.json({ approved: false });
+
+  } catch (err) {
+    return res.status(500).json({ approved: false });
+  }
+});
 module.exports = router;

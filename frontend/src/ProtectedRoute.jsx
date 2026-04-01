@@ -1,20 +1,41 @@
 import { Navigate } from "react-router-dom";
+import { jwtDecode } from "jwt-decode";
 
 function ProtectedRoute({ children, allowedRoles }) {
 
-  const role =
-    localStorage.getItem("adminRole") ||
-    localStorage.getItem("role");
+  const token = localStorage.getItem("adminToken");
+  const role = localStorage.getItem("adminRole");
 
-  if (!role) {
+  // ❌ chưa login
+  if (!token || !role) {
     return <Navigate to="/admin-login" replace />;
   }
 
-  if (!allowedRoles.includes(role)) {
-    return <Navigate to="/" replace />;
-  }
+  try {
+    const decoded = jwtDecode(token);
 
-  return children;
+    // 🔥 check hết hạn token
+    if (decoded.exp * 1000 < Date.now()) {
+      localStorage.removeItem("adminToken");
+      localStorage.removeItem("adminRole");
+
+      return <Navigate to="/admin-login" replace />;
+    }
+
+    // ❌ sai role
+    if (!allowedRoles.includes(role)) {
+      return <Navigate to="/admin-login" replace />; // 🔥 KHÔNG về "/"
+    }
+
+    return children;
+
+  } catch (err) {
+    // ❌ token lỗi
+    localStorage.removeItem("adminToken");
+    localStorage.removeItem("adminRole");
+
+    return <Navigate to="/admin-login" replace />;
+  }
 }
 
 export default ProtectedRoute;

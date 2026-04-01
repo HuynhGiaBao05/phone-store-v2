@@ -61,6 +61,7 @@
   padding: 25px;
   margin-top: 30px;
   border-radius: 14px;
+    overflow: visible;
   box-shadow: 0 8px 20px rgba(0,0,0,0.05);
 }
 .chart-card h3 {
@@ -100,4 +101,14 @@
   outline: none;
   border-color: #3b82f6;
   box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.2);
+}
+
+
+.recharts-wrapper {
+  overflow: visible !important;
+}
+/* tránh label bị đè */
+.recharts-layer text {
+  font-size: 12px;
+  fill: #374151;
 }

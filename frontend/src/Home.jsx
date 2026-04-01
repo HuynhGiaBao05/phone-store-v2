@@ -14,7 +14,7 @@ function Home() {
   const [categories, setCategories] = useState([]);
   const [categoryProducts, setCategoryProducts] = useState({});
   const [showSearch, setShowSearch] = useState(false);
-
+  const [saleProducts, setSaleProducts] = useState([]);
   // ================= GET CATEGORIES =================
   useEffect(() => {
     axios
@@ -23,6 +23,18 @@ function Home() {
       .catch((err) => console.log(err));
   }, []);
 
+  useEffect(() => {
+  axios
+    .get("http://localhost:5000/api/products")
+    .then((res) => {
+      const products = res.data.products || [];
+
+      const sale = products.filter((p) => p.discount > 0);
+
+      setSaleProducts(sale);
+    })
+    .catch((err) => console.log(err));
+}, []);
   // ================= GET FEATURED =================
   useEffect(() => {
     axios
@@ -50,6 +62,16 @@ function Home() {
 
   const heroSlides = ["slide1.png", "slide2.png", "slide3.png","slide4.png","slide5.png","slide6.png","slide7.png","slide8.png"];
 
+  const API_BASE = "http://localhost:5000";
+
+const getImageUrl = (img) => {
+  if (!img) return "/placeholder.png";
+
+  if (img.startsWith("http")) return img;
+
+  return `${API_BASE}/uploads/${img}`;
+};
+
   return (
     <div className="app">
 
@@ -72,8 +94,14 @@ function Home() {
 
       {/* ================= FEATURED ================= */}
       <section className="featured">
-        <h2>⭐ SẢN PHẨM NỔI BẬT</h2>
+        <div className="section-header">
+  <h2 className="section-title">⭐ SẢN PHẨM BÁN CHẠY</h2>
 
+  <Link to="/featured" className="view-more">
+  Xem tất cả →
+</Link>
+  
+</div>
         <Swiper
           modules={[Navigation]}
           navigation
@@ -95,7 +123,7 @@ function Home() {
                   </span>
                 )}
 
-                <img src={item.image} alt={item.name} />
+                <img src={getImageUrl(item.image)} alt={item.name} />
                 <h3>{item.name}</h3>
 
                <div className="price-box">
@@ -123,6 +151,55 @@ function Home() {
           ))}
         </Swiper>
       </section>
+
+          {/* ================= SALE ================= */}
+<section className="featured">
+    <div className="section-header">
+        <h2 className="section-title">🔥 SẢN PHẨM KHUYẾN MÃI</h2>
+
+        <Link to="/sale" className="view-more">
+  Xem tất cả →
+</Link>
+    </div>
+
+    <Swiper
+        modules={[Navigation]}
+        navigation
+        spaceBetween={30}
+        slidesPerView={5}
+        breakpoints={{
+            1024: { slidesPerView: 5 },
+            768: { slidesPerView: 3 },
+            0: { slidesPerView: 1 },
+        }}
+    >
+        {saleProducts.map((item) => (
+            <SwiperSlide key={item._id}>
+                <Link to={`/product/${item._id}`} className="product-card">
+                    <span className="sale-badge">-{item.discount}%</span>
+
+                    <img src={getImageUrl(item.image)} alt={item.name} />
+                    <h3>{item.name}</h3>
+
+                    <div className="price-box">
+                        <span className="new-price">
+                            {formatMoney(item.price)} đ
+                        </span>
+
+                        <div className="old-price-wrapper">
+                            <span className="old-price">
+                                {formatMoney(item.originalPrice)} đ
+                            </span>
+                            <span className="discount">
+                                -{item.discount}%
+                            </span>
+                        </div>
+                    </div>
+                </Link>
+            </SwiperSlide>
+        ))}
+    </Swiper>
+</section>
 
       {/* ================= CATEGORY SECTIONS ================= */}
       {categories.map((cat) => {
@@ -162,7 +239,7 @@ function Home() {
                       </span>
                     )}
 
-                    <img src={p.image} alt={p.name} />
+                    <img src={getImageUrl(p.image)} alt={p.name} />
                     <h3>{p.name}</h3>
 
                     <div className="price-box">

@@ -1,289 +1,219 @@
 /* ================= PAGE ================= */
 
 .product-detail-page {
-  background: #2c2c2c;
-  padding: 80px 60px;
-  color: white;
-  min-height: 100vh;
+    background: #ffffff;
+    padding: 100px 80px;
+    min-height: 100vh;
 }
 
+/* ================= CONTAINER ================= */
+
 .detail-container {
-  display: flex;
-  gap: 60px;
+    display: flex;
+    gap: 50px;
+    background: #ffffff;
+    padding: 40px;
+    border-radius: 20px;
+    color: #111;
 }
 
 /* ================= LEFT ================= */
 
 .detail-left {
-  width: 50%;
+    width: 50%;
 }
 
 .main-image {
-  background: #1f1f1f;
-  padding: 30px;
-  border-radius: 20px;
+    background: #fff;
+    padding: 20px;
+    border-radius: 16px;
+    border: 1px solid #eee;
 }
 
-.main-image img {
-  width: 100%;
-  object-fit: contain;
-}
+    .main-image img {
+        width: 100%;
+        object-fit: contain;
+    }
 
+/* 🔥 THUMBNAIL */
 .thumbnail-row {
-  display: flex;
-  gap: 15px;
-  margin-top: 20px;
+    display: flex;
+    gap: 12px;
+    margin-top: 15px;
 }
 
-.thumbnail-row img {
-  width: 80px;
-  background: #1f1f1f;
-  padding: 10px;
-  border-radius: 10px;
-  cursor: pointer;
-}
+    .thumbnail-row img {
+        width: 80px;
+        height: 80px;
+        object-fit: cover;
+        border-radius: 10px;
+        border: 2px solid transparent;
+        cursor: pointer;
+        transition: 0.2s;
+    }
+
+        .thumbnail-row img:hover {
+            border-color: #ff6a00;
+        }
+
+        .thumbnail-row img.active {
+            border-color: #ff3c3c;
+        }
 
 /* ================= RIGHT ================= */
 
 .detail-right {
-  width: 50%;
+    width: 50%;
 }
 
 .product-title {
-  font-size: 28px;
-  margin-bottom: 25px;
+    font-size: 32px;
+    font-weight: bold;
+    margin-bottom: 10px;
+    color: #111;
 }
 
-/* ================= PRICE BOX ================= */
+/* ================= PRICE ================= */
 
 .price-highlight-box {
-  background: linear-gradient(135deg, #ff7a18, #ff3c3c);
-  padding: 25px;
-  border-radius: 20px;
-  margin-bottom: 30px;
+    background: linear-gradient(135deg, #ff6a00, #ff8c00);
+    padding: 30px;
+    border-radius: 20px;
+    margin-bottom: 25px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    color: white;
+    gap: 20px;
 }
 
+/* LEFT */
+.price-left {
+    display: flex;
+    flex-direction: column;
+    flex: 2;
+    min-width: 0; /* 🔥 FIX co chữ trong flex */
+}
+
+/* LABEL */
+.price-label {
+    font-size: 16px;
+}
+
+/* 🔥 GIÁ CHÍNH (FIX TO + KHÔNG CO) */
 .new-price {
-  font-size: 32px;
-  font-weight: bold;
+    font-size: 32px !important; /* 🔥 TO BẰNG COUNTDOWN */
+    font-weight: 900;
+    line-height: 1;
+    white-space: nowrap;
+    color: #ffffff;
+    letter-spacing: -1px;
+    text-shadow: 0 3px 12px rgba(0,0,0,0.25);
+    flex-shrink: 0; /* 🔥 KHÔNG BỊ CO */
+}
+
+/* 🔥 GIÁ GỐC */
+.old-price {
+    font-size: 24px !important;
+    text-decoration: line-through;
+    opacity: 0.85;
+    color: #ffffff;
+    white-space: nowrap;
+    flex-shrink: 0;
 }
 
 .vat-note {
-  margin-top: 6px;
-  font-size: 14px;
-  color: #ddd;
+    font-size: 14px;
 }
 
-/* ================= PROMO BOX ================= */
-
-.promo-highlight-box {
-  background: linear-gradient(90deg, #ff5a2c, #ff8a00);
-  border-radius: 20px;
-  padding: 20px 30px;
-  color: white;
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 20px;
+/* RIGHT */
+.price-right {
+    text-align: right;
+    flex: 1;
+    min-width: 150px;
+    flex-shrink: 0; /* 🔥 KHÔNG BỊ CO */
 }
 
-.promo-left {
-  display: flex;
-  flex-direction: column;
-}
-
-.promo-label {
-  font-size: 14px;
-  opacity: 0.9;
-}
-
-.promo-price {
-  font-size: 32px;
-  font-weight: bold;
-  margin: 6px 0;
-}
-
-.promo-original {
-  text-decoration: line-through;
-  font-size: 16px;
-  opacity: 0.85;
-}
-
-/* ================= COUNTDOWN ================= */
-
-.promo-right {
-  text-align: right;
+/* 🔥 COUNTDOWN */
+.countdown-time {
+    font-size: 32px; /* giữ chuẩn để match giá */
+    font-weight: 800;
 }
 
 .countdown-label {
-  font-size: 14px;
-  opacity: 0.9;
+    font-size: 16px;
 }
 
-.countdown-time {
-  font-size: 26px;
-  font-weight: bold;
-  margin: 4px 0;
+.countdown-date {
+    font-size: 14px;
 }
 
-.countdown-meta {
-  font-size: 13px;
-  opacity: 0.85;
+/* ================= BOX TRẮNG ================= */
+
+.promotion-box,
+.product-description {
+    background: #fff;
+    padding: 20px;
+    border-radius: 16px;
+    border: 1px solid #eee;
 }
 
-/* ================= BADGE ================= */
-
-.expiring-badge {
-  background: #ff3b30;
-  color: white;
-  padding: 6px 12px;
-  border-radius: 20px;
-  font-weight: bold;
-  display: inline-block;
-  margin-bottom: 10px;
-  animation: pulse 1s infinite;
-}
-
-@keyframes pulse {
-  0% { transform: scale(1); }
-  50% { transform: scale(1.05); }
-  100% { transform: scale(1); }
-}
-
-/* ================= PROMOTION LIST ================= */
-
-.promotion-box {
-  background: #1f1f1f;
-  padding: 20px;
-  border-radius: 15px;
-  margin-bottom: 30px;
-}
-
-.promotion-box ul {
-  margin-top: 10px;
-  padding-left: 20px;
-}
-
-/* ================= BUTTONS ================= */
+/* ================= BUTTON ================= */
 
 .button-group {
-  display: flex;
-  gap: 20px;
-  margin-bottom: 30px;
+    display: flex;
+    gap: 15px;
+    margin-bottom: 25px;
+}
+.installment {
+    flex: 1;
+    background: #2f80ed;
+    padding: 15px;
+    border-radius: 10px;
+    border: none;
+    color: white;
+    font-weight: bold;
+    cursor: pointer;
 }
 
 .buy-now {
-  flex: 1;
-  background: #ff3c3c;
-  padding: 15px;
-  border: none;
-  border-radius: 12px;
-  font-weight: bold;
-  cursor: pointer;
+    flex: 1;
+    background: #ff3c3c;
+    padding: 15px;
+    border-radius: 10px;
+    border: none;
+    color: white;
+    font-weight: bold;
+    cursor: pointer;
 }
 
-.installment {
-  flex: 1;
-  background: #1677ff;
-  padding: 15px;
-  border: none;
-  border-radius: 12px;
-  font-weight: bold;
-  cursor: pointer;
+/* ================= EXPIRING BADGE ================= */
+
+.expiring-badge {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding: 6px 14px;
+    border: 2px solid #ff3c3c;
+    border-radius: 999px;
+    background: #ff3c3c;
+    color: #ffffff;
+    font-weight: 700;
+    font-size: 14px;
+    margin-bottom: 12px;
+    animation: pulseBadge 1.5s infinite;
 }
 
-/* ================= DESCRIPTION ================= */
+@keyframes pulseBadge {
+    0% {
+        box-shadow: 0 0 0 0 rgba(255, 60, 60, 0.4);
+    }
 
-.product-description {
-  background: #1f1f1f;
-  padding: 20px;
-  border-radius: 15px;
-}
+    70% {
+        box-shadow: 0 0 0 10px rgba(255, 60, 60, 0);
+    }
 
-/* ================= LOGIN MODAL ================= */
-
-.login-modal-overlay {
-  position: fixed;
-  inset: 0;
-  background: rgba(0, 0, 0, 0.55);
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  z-index: 999;
-}
-
-.login-modal {
-  background: white;
-  padding: 30px;
-  width: 90%;
-  max-width: 360px;
-  border-radius: 14px;
-  text-align: center;
-  animation: fadeInScale 0.25s ease;
-}
-
-.login-modal h3 {
-  margin-bottom: 10px;
-  color: #111;
-}
-
-.login-modal p {
-  margin-bottom: 20px;
-  color: #555;
-}
-
-.login-modal-buttons {
-  display: flex;
-  gap: 10px;
-}
-
-.btn-cancel {
-  flex: 1;
-  padding: 8px;
-  border: 1px solid #ccc;
-  background: white;
-  border-radius: 6px;
-  cursor: pointer;
-}
-
-.btn-login {
-  flex: 1;
-  padding: 8px;
-  border: none;
-  background: #ff3b30;
-  color: white;
-  border-radius: 6px;
-  cursor: pointer;
-}
-
-@keyframes fadeInScale {
-  from { opacity: 0; transform: scale(0.9); }
-  to { opacity: 1; transform: scale(1); }
-}
-
-/* ================= RESPONSIVE ================= */
-
-@media (max-width: 992px) {
-  .detail-container {
-    flex-direction: column;
-  }
-
-  .detail-left,
-  .detail-right {
-    width: 100%;
-  }
-
-  .product-detail-page {
-    padding: 40px 20px;
-  }
-
-  .promo-highlight-box {
-    flex-direction: column;
-    align-items: flex-start;
-    gap: 15px;
-  }
-
-  .promo-right {
-    text-align: left;
-  }
+    100% {
+        box-shadow: 0 0 0 0 rgba(255, 60, 60, 0);
+    }
 }
