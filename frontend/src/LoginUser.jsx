@@ -91,18 +91,25 @@ setLoginLoading(true);
       
     );
 
-    const role = res.data.role?.toUpperCase();
+    const user = res.data?.data?.user;
+const token = res.data?.data?.token;
 
+if (!user || !token) {
+  toast.error("Dữ liệu trả về lỗi");
+  return;
+}
+
+const role = user.role?.toUpperCase();
 
 if (role !== "USER") {
   toast.error("Tài khoản này không phải USER");
   return;
 }
-if (!res.data.token) {
+if (!token) {
   toast.error("Token không hợp lệ");
   return;
 }
-    localStorage.setItem("token", res.data.token);
+    localStorage.setItem("token", token);
     localStorage.setItem("role", role);
     toast.success("Đăng nhập thành công!");
     toast.info("Đã gửi email cảnh báo đăng nhập");
