@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import axios from "axios";
 import AdminLayout from "./AdminLayout";
 import "./AdminBrands.css";
+import { toast } from "react-toastify";
 
 function AdminBrands() {
 
@@ -19,7 +20,7 @@ function AdminBrands() {
 
   const handleCreate = async () => {
     if (!newBrand) {
-      alert("Vui lòng nhập tên thương hiệu");
+      toast.error("Vui lòng nhập tên thương hiệu");
       return;
     }
 

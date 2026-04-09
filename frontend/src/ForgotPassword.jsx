@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import axios from "axios";
 import "./ForgotPassword.css";
 import { useNavigate } from "react-router-dom";
+import { toast } from "react-toastify";
 
 function ForgotPassword() {
   const [step, setStep] = useState(1);

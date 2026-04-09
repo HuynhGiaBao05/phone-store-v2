@@ -8,6 +8,7 @@ import "swiper/css/pagination";
 import { formatMoney } from "./utils/formatMoney";
 import { useState, useEffect } from "react";
 import axios from "axios";
+import { toast } from "react-toastify";
 
 function Home() {
   const [featuredProducts, setFeaturedProducts] = useState([]);
@@ -67,6 +68,11 @@ function Home() {
 const getImageUrl = (img) => {
   if (!img) return "/placeholder.png";
 
+  // 🔥 FIX ARRAY
+  if (Array.isArray(img)) {
+    img = img[0];
+  }
+
   if (img.startsWith("http")) return img;
 
   return `${API_BASE}/uploads/${img}`;
@@ -93,7 +99,7 @@ const getImageUrl = (img) => {
       </section>
 
       {/* ================= FEATURED ================= */}
-      <section className="featured">
+      <section className="category-section">
         <div className="section-header">
   <h2 className="section-title">⭐ SẢN PHẨM BÁN CHẠY</h2>
 
@@ -103,16 +109,18 @@ const getImageUrl = (img) => {
   
 </div>
         <Swiper
-          modules={[Navigation]}
-          navigation
-          spaceBetween={30}
-          slidesPerView={5}
-          breakpoints={{
-            1024: { slidesPerView: 5 },
-            768: { slidesPerView: 3 },
+        modules={[Navigation]}
+        navigation={true}
+        spaceBetween={30}
+        slidesPerView={4}
+        observer={true}           
+  observeParents={true}
+        breakpoints={{
+            1024: { slidesPerView: 4 },
+            768: { slidesPerView: 2 },
             0: { slidesPerView: 1 },
-          }}
-        >
+        }}
+>
           {featuredProducts.map((item) => (
             <SwiperSlide key={item._id}>
               <Link to={`/product/${item._id}`} className="product-card">
@@ -153,7 +161,7 @@ const getImageUrl = (img) => {
       </section>
 
           {/* ================= SALE ================= */}
-<section className="featured">
+<section className="category-section">
     <div className="section-header">
         <h2 className="section-title">🔥 SẢN PHẨM KHUYẾN MÃI</h2>
 
@@ -166,10 +174,10 @@ const getImageUrl = (img) => {
         modules={[Navigation]}
         navigation
         spaceBetween={30}
-        slidesPerView={5}
+        slidesPerView={4}
         breakpoints={{
-            1024: { slidesPerView: 5 },
-            768: { slidesPerView: 3 },
+            1024: { slidesPerView: 4 },
+            768: { slidesPerView: 2 },
             0: { slidesPerView: 1 },
         }}
     >

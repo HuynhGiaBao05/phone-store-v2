@@ -1,6 +1,7 @@
 const mongoose = require("mongoose");
 
 const orderSchema = new mongoose.Schema(
+  
   {
     // =====================================================
     // 👤 USER ĐẶT HÀNG
@@ -35,7 +36,7 @@ const orderSchema = new mongoose.Schema(
         },
       },
     ],
-
+deliveredAt: Date,
     // =====================================================
     // 💰 TỔNG TIỀN
     // =====================================================
@@ -54,15 +55,35 @@ const orderSchema = new mongoose.Schema(
       address: String,
       note: String,
     },
+    // =====================================================
+// 🚚 HÌNH THỨC NHẬN HÀNG
+// =====================================================
+deliveryMethod: {
+  type: String,
+  enum: ["DELIVERY", "STORE"],
+  default: "STORE"
+},
 
+    // =====================================================
+    // trạng thái thanh toán
+    // =====================================================
+paymentStatus: {
+  type: String,
+  enum: ["UNPAID", "PAID"],
+  default: "UNPAID"
+},
     // =====================================================
     // 💳 PHƯƠNG THỨC THANH TOÁN (🔥 THÊM MỚI)
     // =====================================================
     paymentMethod: {
-      type: String,
-      enum: ["COD", "BANKING"],
-      default: "COD",
-    },
+  type: String,
+  enum: ["COD", "BANKING", "MOMO"],
+  default: "COD"
+},
+orderCode: {
+  type: String,
+  unique: true
+},
 
     // =====================================================
     // 📦 TRẠNG THÁI ĐƠN
@@ -79,6 +100,7 @@ const orderSchema = new mongoose.Schema(
       default: "PENDING",
       index: true, // 🔥 FIX: tăng tốc query dashboard
     },
+   
 
     // =====================================================
     // 📜 LỊCH SỬ TRẠNG THÁI
@@ -104,11 +126,25 @@ const orderSchema = new mongoose.Schema(
 
 
 // =====================================================
-// 🔥 AUTO PUSH HISTORY KHI TẠO ĐƠN
+// 🔥 AUTO HANDLE TRƯỚC KHI SAVE
 // =====================================================
 orderSchema.pre("save", function (next) {
 
-  if (this.isNew) {
+  if (this.isNew && !this.orderCode) {
+
+    // ✅ tạo mã đơn
+   this.orderCode =
+  "ORD-" +
+  new Date().toISOString().slice(2, 10).replace(/-/g, "") +
+  "-" +
+  Math.floor(Math.random() * 1000);
+
+    // ✅ đảm bảo có mảng
+    if (!this.statusHistory) {
+      this.statusHistory = [];
+    }
+
+    // ✅ push lịch sử
     this.statusHistory.push({
       status: "PENDING",
       changedBy: this.user,
@@ -117,5 +153,7 @@ orderSchema.pre("save", function (next) {
 
   next();
 });
+orderSchema.index({ createdAt: 1 });
 
+// ❗ LUÔN ĐỂ CUỐI FILE
 module.exports = mongoose.model("Order", orderSchema);

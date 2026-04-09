@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import axios from "axios";
 import "./AdminStores.css";
+import { toast } from "react-toastify";
 
 function AdminStores() {
 
@@ -56,7 +57,7 @@ function AdminStores() {
   const handleSubmit = async () => {
 
     if (!form.name || !form.address) {
-      alert("Nhập đầy đủ thông tin");
+      toast.error("Nhập đầy đủ thông tin");
       return;
     }
 

@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import axios from "axios";
 import "./AdminSecurityLogs.css";
+import { toast } from "react-toastify";
 
 function AdminSecurityLogs() {
   const [logs, setLogs] = useState([]);

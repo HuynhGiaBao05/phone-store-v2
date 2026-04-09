@@ -18,9 +18,9 @@ function Navbar() {
 
     const location = useLocation();
     const navigate = useNavigate();
-
-    const token = localStorage.getItem("token");
-    const role = localStorage.getItem("role");
+    
+    const [token, setToken] = useState(localStorage.getItem("token"));
+    const [role, setRole] = useState(localStorage.getItem("role"));
 
     const API_BASE = "http://localhost:5000";
 
@@ -31,11 +31,23 @@ function Navbar() {
             .then((res) => setCategories(res.data))
             .catch((err) => console.log(err));
     }, []);
+//============login/logout=======//
+useEffect(() => {
+    const handleAuthChange = () => {
+        setToken(localStorage.getItem("token"));
+        setRole(localStorage.getItem("role"));
+    };
 
+    window.addEventListener("authChanged", handleAuthChange);
+
+    return () => window.removeEventListener("authChanged", handleAuthChange);
+}, []);
     // ================= CART COUNT =================
     const fetchCartCount = async () => {
-        if (!token) return;
-
+        if (!token) {
+        setCartCount(0); 
+        return;
+    }
         try {
             const res = await axios.get(`${API_BASE}/api/cart`, {
                 headers: {
@@ -45,12 +57,16 @@ function Navbar() {
 
             const items = res.data.items || [];
 
-            const totalQty = items.reduce(
-                (sum, item) => sum + item.quantity,
-                0
-            );
+// ✅ lọc item hợp lệ
+const validItems = items.filter(item => item.product);
 
-            setCartCount(totalQty);
+// ✅ tính lại
+const totalQty = validItems.reduce(
+  (sum, item) => sum + item.quantity,
+  0
+);
+
+setCartCount(totalQty);
 
         } catch (err) {
             console.log(err);
@@ -58,13 +74,19 @@ function Navbar() {
     };
 
     useEffect(() => {
+    fetchCartCount();
+
+   const handleUpdate = (e) => {
+    if (e.detail?.cartCount !== undefined) {
+        setCartCount(e.detail.cartCount); // ✅ đúng chuẩn
+    } else {
         fetchCartCount();
+    }
+};
+    window.addEventListener("cartUpdated", handleUpdate);
 
-        const handleUpdate = () => fetchCartCount();
-        window.addEventListener("cartUpdated", handleUpdate);
-
-        return () => window.removeEventListener("cartUpdated", handleUpdate);
-    }, []);
+    return () => window.removeEventListener("cartUpdated", handleUpdate);
+}, [token]); // 🔥 thêm token vào đây
 
     // ================= LOGO CLICK =================
     const handleLogoClick = (e) => {
@@ -85,9 +107,20 @@ function Navbar() {
 
     // ================= LOGOUT =================
     const handleLogout = () => {
-        localStorage.clear();
-        navigate("/login");
-    };
+  localStorage.clear();
+
+  setCartCount(0);
+
+  // ✅ auth
+  window.dispatchEvent(new Event("authChanged"));
+
+  // 🔥 FIX CHỖ NÀY
+  window.dispatchEvent(new CustomEvent("cartUpdated", {
+    detail: { cartCount: 0 }
+  }));
+
+  navigate("/login");
+};
 
     // ================= SEARCH =================
     useEffect(() => {
@@ -192,7 +225,7 @@ const res = await axios.get(
                                         </p>
 
                                         <p onClick={handleLogout}>
-Đăng xuất
+                                            Đăng xuất
                                         </p>
 
                                     </div>

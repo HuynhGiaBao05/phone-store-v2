@@ -2,14 +2,21 @@ import { useEffect, useState } from "react";
 import axios from "axios";
 import "./CustomerManagement.css";
 import { useNavigate } from "react-router-dom";
+import { toast } from "react-toastify";
 
 function CustomerManagement() {
   const [customers, setCustomers] = useState([]);
   const [statusFilter, setStatusFilter] = useState("");
-  const role = localStorage.getItem("adminRole");
+  
   const navigate = useNavigate();
 
-  const token = localStorage.getItem("adminToken");
+  const path = window.location.pathname;
+
+const isAdmin = path.startsWith("/admin");
+const role = isAdmin ? "ADMIN" : "STAFF";
+const token = isAdmin
+  ? localStorage.getItem("adminToken")
+  : localStorage.getItem("staffToken");
 
   // 🔥 load customer
   const fetchCustomers = async () => {
@@ -32,6 +39,7 @@ function CustomerManagement() {
 
   // 🔥 update status
   const updateStatus = async (id, status) => {
+    console.log("STATUS:", status);
     await axios.put(
       `http://localhost:5000/api/customers/${id}/status`,
       { status },
@@ -73,7 +81,7 @@ useEffect(() => {
   if (role === "ADMIN") {
     fetchStaffs();
   }
-}, []);
+}, [role]);
 
 const assignCustomer = async (customerId, staffId) => {
   await axios.put(
@@ -92,7 +100,7 @@ const assignCustomer = async (customerId, staffId) => {
 
       {/* FILTER */}
       <div className="filter-box">
-        <select onChange={(e) => setStatusFilter(e.target.value)}>
+       <select onChange={(e) => setStatusFilter(e.target.value)}>
           <option value="">All</option>
           <option value="NEW">NEW</option>
           <option value="CARE">CARE</option>
@@ -134,9 +142,10 @@ const assignCustomer = async (customerId, staffId) => {
               {role === "ADMIN" && (
   <td>
     <select
-      value={c.assignedTo?._id || ""}
-      onChange={(e) => assignCustomer(c._id, e.target.value)}
-    >
+  value={c.assignedTo?._id || ""}
+  onClick={(e) => e.stopPropagation()}
+  onChange={(e) => assignCustomer(c._id, e.target.value)}
+>
       <option value="">Chưa có</option>
       {staffs.map((s) => (
         <option key={s._id} value={s._id}>
@@ -149,12 +158,35 @@ const assignCustomer = async (customerId, staffId) => {
 
 <td>
   {role === "STAFF" && (
-    <>
-      <button onClick={() => updateStatus(c._id, "CARE")}>CARE</button>
-      <button onClick={() => updateStatus(c._id, "VIP")}>VIP</button>
-      <button onClick={() => updateStatus(c._id, "BLOCK")}>BLOCK</button>
-    </>
-  )}
+  <>
+    <button
+      onClick={(e) => {
+        e.stopPropagation();
+        updateStatus(c._id, "CARE");
+      }}
+    >
+      CARE
+    </button>
+
+    <button
+      onClick={(e) => {
+        e.stopPropagation();
+        updateStatus(c._id, "VIP");
+      }}
+    >
+      VIP
+    </button>
+
+    <button
+      onClick={(e) => {
+        e.stopPropagation();
+        updateStatus(c._id, "BLOCK");
+      }}
+    >
+      BLOCK
+    </button>
+  </>
+)}
 </td>
             </tr>
           ))}

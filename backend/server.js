@@ -3,11 +3,10 @@ const mongoose = require("mongoose");
 const cors = require("cors");
 const path = require("path"); // ✅ THÊM DÒNG NÀY
 require("dotenv").config();
-
-
+const momoRoutes = require("./routes/momo");
 const app = express();
 const helmet = require("helmet");
-
+const hpp = require("hpp");
 
 const rateLimit = require("express-rate-limit");
 
@@ -23,12 +22,25 @@ const loginLimiter = rateLimit({
   standardHeaders: true,
   legacyHeaders: false,
 });
-
+const otpLimiter = rateLimit({
+  windowMs: 60 * 1000,
+  max: 5,
+  message: {
+    message: "Gửi OTP quá nhiều, thử lại sau"
+  }
+});
 
 // 🛡️ SECURITY FIRST
 app.use(
   helmet({
-    contentSecurityPolicy: false
+    contentSecurityPolicy: {
+      directives: {
+        defaultSrc: ["'self'"],
+        imgSrc: ["'self'", "data:", "blob:", "http://localhost:5000"],
+        scriptSrc: ["'self'"],
+        styleSrc: ["'self'", "'unsafe-inline'"],
+      },
+    },
   })
 );
 app.set("trust proxy", 1);
@@ -46,7 +58,7 @@ app.use(
 
 // 🛡️ BODY
 app.use(express.json({ limit: "10kb" }));
-
+app.use(hpp());
 // 🛡️ chống NoSQL injection
 // 🛡️ CUSTOM NoSQL SANITIZE 
 // 🛡️ FULL SANITIZE (NoSQL + Prototype Pollution)
@@ -88,17 +100,12 @@ app.use((req, res, next) => {
 
 // 🛡️ BRUTE FORCE
 app.use("/api/users/login", loginLimiter);
+app.use("/api/users/send-reset-otp", otpLimiter);
+app.use("/api/users/register", otpLimiter);
+app.use("/api/users/resend-otp", otpLimiter);
 
 
 
-// 🛡️ XSS: Content Security Policy
-app.use((req, res, next) => {
-  res.setHeader(
-  "Content-Security-Policy",
-  "default-src 'self'; img-src 'self' data: blob:; script-src 'self'; style-src 'self' 'unsafe-inline';"
-);
-  next();
-});
 
 
 
@@ -159,8 +166,7 @@ app.use("/api/cart", cartRoutes);
 app.use("/api/report", reportRoutes);
 app.use("/api/stores", storeRoutes);
 app.use("/api/customers", customerRoutes);
-
-
+app.use("/api/momo", momoRoutes);
 // =====================================================
 // TEST ROUTE
 // =====================================================

@@ -15,7 +15,7 @@ function ProtectedRoute({ children, allowedRoles }) {
     const decoded = jwtDecode(token);
 
     // 🔥 check hết hạn token
-    if (decoded.exp * 1000 < Date.now()) {
+    if (decoded.exp && decoded.exp * 1000 < Date.now()) {
       localStorage.removeItem("adminToken");
       localStorage.removeItem("adminRole");
 

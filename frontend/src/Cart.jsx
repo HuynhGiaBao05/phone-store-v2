@@ -46,6 +46,13 @@ function CartPage() {
 
             console.log("Cart data:", res.data.items);
             setCart(res.data.items || []);
+            const total = res.data.items
+  .filter(i => i.product)
+  .reduce((sum, i) => sum + i.quantity, 0);
+
+window.dispatchEvent(new CustomEvent("cartUpdated", {
+  detail: { cartCount: total }
+}));
         } catch (err) {
             console.log("Fetch cart error:", err);
         }
@@ -94,18 +101,38 @@ function CartPage() {
     // ====================================================
     // UPDATE QUANTITY
     // ====================================================
-    const updateQuantity = async (productId, quantity) => {
-        try {
-            await axios.put(
-                "http://localhost:5000/api/cart/update",
-                { productId, quantity },
-{ headers: { Authorization: `Bearer ${token}` } }
-            );
-            fetchCart();
-        } catch (err) {
-            console.log("Update qty error:", err);
-        }
-    };
+  const updateQuantity = async (productId, quantity) => {
+
+  setCart(prev => {
+    const updated = prev.map(item =>
+      item.product?._id === productId
+        ? { ...item, quantity }
+        : item
+    );
+
+    // ✅ chỉ tính item hợp lệ
+    const total = updated
+      .filter(i => i.product)
+      .reduce((sum, i) => sum + i.quantity, 0);
+
+    window.dispatchEvent(new CustomEvent("cartUpdated", {
+      detail: { cartCount: total }
+    }));
+
+    return updated;
+  });
+
+  try {
+    await axios.put(
+      "http://localhost:5000/api/cart/update",
+      { productId, quantity },
+      { headers: { Authorization: `Bearer ${token}` } }
+    );
+  } catch (err) {
+    console.log("Update qty error:", err);
+    fetchCart();
+  }
+};
 
     const increaseQty = (item) => {
         if (!item.product) return;
@@ -118,27 +145,41 @@ function CartPage() {
             updateQuantity(item.product._id, item.quantity - 1);
         }
     };
-
     // ====================================================
     // REMOVE ITEM
     // ====================================================
-    const removeItem = async (productId) => {
-        try {
-            await axios.delete(
-                `http://localhost:5000/api/cart/remove/${productId}`,
-                { headers: { Authorization: `Bearer ${token}` } }
-            );
+   const removeItem = async (productId) => {
 
-            setSelectedItems(prev =>
-                prev.filter(id => id !== productId)
-            );
+  setCart(prev => {
+  const updated = prev
+  .filter(item => item.product?._id !== productId)
+  .filter(i => i.product);
 
-            fetchCart();
-        } catch (err) {
-            console.log("Remove error:", err);
-        }
-    };
+const total = updated.reduce((sum, i) => sum + i.quantity, 0);
 
+  window.dispatchEvent(new CustomEvent("cartUpdated", {
+    detail: { cartCount: total }
+  }));
+
+  return updated;
+});
+setSelectedItems(prev =>
+  prev.filter(id => id !== productId)
+);
+
+try {
+  await axios.delete(
+    `http://localhost:5000/api/cart/remove/${productId}`,
+    { headers: { Authorization: `Bearer ${token}` } }
+  );
+
+ 
+
+} catch (err) {
+  console.log("Remove error:", err);
+  fetchCart();
+}
+};
     // ====================================================
     // CALCULATE TOTAL
     // ====================================================
@@ -169,10 +210,19 @@ function CartPage() {
     // FIX IMAGE URL
     // ====================================================
     const getImageUrl = (image) => {
-        if (!image) return "";
-        if (image.startsWith("http")) return image;
-        return `http://localhost:5000/uploads/${image}`;
-    };
+  if (!image) return "";
+
+  // 🔥 FIX ARRAY
+  if (Array.isArray(image)) {
+    image = image[0];
+  }
+
+  if (typeof image !== "string") return "";
+
+  if (image.startsWith("http")) return image;
+
+  return `http://localhost:5000/uploads/${image}`;
+};
 
     // ====================================================
     // RENDER
@@ -223,9 +273,9 @@ function CartPage() {
 
                         {/* IMAGE */}
                         <img
-                            src={getImageUrl(item.product?.image)}
-                            alt={item.product?.name || "Sản phẩm"}
-                        />
+  src={getImageUrl(item.product?.image) || "https://via.placeholder.com/80"}
+  alt={item.product?.name || "Sản phẩm"}
+/>
 
                         <div className="item-info">
 

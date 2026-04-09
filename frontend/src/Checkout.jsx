@@ -1,6 +1,8 @@
 import { useEffect, useState } from "react";
 import axios from "axios";
 import "./Checkout.css";
+import { toast } from "react-toastify";
+import { useNavigate } from "react-router-dom";
 
 function Checkout() {
     const [step, setStep] = useState(1);
@@ -21,15 +23,18 @@ function Checkout() {
         email: "",
         address: ""
     });
+const phoneRegex = /^0[0-9]{9}$/;
+const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+const nameRegex = /^[a-zA-ZÀ-ỹ\s]+$/;
 
     const [paymentMethod, setPaymentMethod] = useState("COD");
     const token = localStorage.getItem("token");
 
-    const [deliveryMethod, setDeliveryMethod] = useState("STORE");
+    const [deliveryMethod, setDeliveryMethod] = useState("");
     const [storeAddress, setStoreAddress] = useState("");
+const [loading, setLoading] = useState(false);
 
     const API_BASE = "http://localhost:5000";
-
     // ====================================================
     // FIXED PRICE (discount % + originalPrice)
     // ====================================================
@@ -47,9 +52,19 @@ function Checkout() {
     };
 
     const getImageUrl = (img) => {
-        if (!img) return "/placeholder.png";
-        return img.startsWith("http") ? img : `${API_BASE}/uploads/${img}`;
-    };
+  if (!img) return "/placeholder.png";
+
+  // 🔥 FIX ARRAY
+  if (Array.isArray(img)) {
+    img = img[0];
+  }
+
+  if (typeof img !== "string") return "/placeholder.png";
+
+  return img.startsWith("http")
+    ? img
+    : `${API_BASE}/uploads/${img}`;
+};
 
     // ====================================================
     // LOAD STORES
@@ -79,71 +94,189 @@ function Checkout() {
     // NEXT STEP
     // ====================================================
     const handleNext = () => {
-        if (!customer.name || !customer.phone) {
-            alert("Vui lòng nhập đủ thông tin");
-            return;
-        }
-        if (deliveryMethod === "DELIVERY" && !customer.address) {
-            alert("Vui lòng nhập địa chỉ giao hàng");
-            return;
-        }
-        if (deliveryMethod === "STORE" && !storeAddress) {
-            alert("Vui lòng chọn cửa hàng");
-            return;
-        }
-        setStep(2);
-    };
 
+    if (!customer.name.trim()) {
+        toast.error("Vui lòng nhập họ tên");
+        return;
+    }
+
+if (!nameRegex.test(customer.name.trim())) {
+  toast.error("Tên không hợp lệ (chỉ chứa chữ)");
+  return;
+}
+    if (!customer.phone.trim()) {
+        toast.error("Vui lòng nhập số điện thoại");
+        return;
+    }
+
+    if (!phoneRegex.test(customer.phone.trim())) {
+        toast.error("Số điện thoại không hợp lệ");
+        return;
+    }
+
+    if (customer.email && !emailRegex.test(customer.email.trim())) {
+        toast.error("Email không hợp lệ");
+        return;
+    }
+
+    if (!deliveryMethod) {
+        toast.error("Vui lòng chọn phương thức nhận hàng");
+        return;
+    }
+
+    if (deliveryMethod === "DELIVERY" && !customer.address.trim()) {
+        toast.error("Vui lòng nhập địa chỉ giao hàng");
+        return;
+    }
+
+    if (deliveryMethod === "STORE" && !storeAddress) {
+        toast.error("Vui lòng chọn cửa hàng");
+        return;
+    }
+
+    setStep(2);
+window.scrollTo({ top: 0, behavior: "smooth" });
+};
+const navigate = useNavigate();
     // ====================================================
     // PAYMENT
 // ====================================================
-    const handlePayment = async () => {
-        try {
-            const formattedItems = cart.map((item) => ({
-                product: item.product?._id || item.product,
-                quantity: item.quantity
-            }));
+ 
+const handlePayment = async () => {
 
-            const orderData = {
+  if (loading) return; // ❗ chặn spam
+  setLoading(true);
+
+  if (!token) {
+    toast.error("Bạn chưa đăng nhập");
+    navigate("/login");
+    setLoading(false);
+    return;
+  }
+  if (!deliveryMethod) {
+  toast.error("Chưa chọn phương thức nhận hàng");
+  setLoading(false);
+  return;
+}
+if (customer.email && !emailRegex.test(customer.email.trim())) {
+  toast.error("Email không hợp lệ");
+  setLoading(false);
+  return;
+}
+if (!nameRegex.test(customer.name.trim())) {
+  toast.error("Tên không hợp lệ");
+  setLoading(false);
+  return;
+}
+
+if (!phoneRegex.test(customer.phone.trim())) {
+  toast.error("Số điện thoại không hợp lệ");
+  setLoading(false);
+  return;
+}
+if (deliveryMethod === "DELIVERY" && !customer.address) {
+  toast.error("Thiếu địa chỉ");
+  setLoading(false);
+  return;
+}
+
+if (deliveryMethod === "STORE" && !storeAddress) {
+  toast.error("Chưa chọn cửa hàng");
+  setLoading(false);
+  return;
+}
+if (!customer.name.trim() || !customer.phone.trim()) {
+  toast.error("Thiếu thông tin khách hàng");
+  setLoading(false);
+  return;
+}
+  try {
+    const formattedItems = cart.map((item) => ({
+      product: item.product?._id || item.product,
+      quantity: item.quantity
+    }));
+
+    const orderData = {
   items: formattedItems,
-
-  // 🔥 FIX QUAN TRỌNG
   shippingInfo: {
-    phone: customer.phone,
+    phone: customer.phone.trim(),
     address:
       deliveryMethod === "DELIVERY"
-        ? customer.address
+        ? customer.address.trim()
         : storeAddress
   },
-
   paymentMethod,
-  deliveryMethod
+  deliveryMethod: deliveryMethod === "DELIVERY" ? "DELIVERY" : "STORE"
 };
-
-            const res = await axios.post(
-                `${API_BASE}/api/orders`,
-                orderData,
-                {
-                    headers: {
-                        Authorization: `Bearer ${token}`,
-                        "Content-Type": "application/json"
-                    }
-                }
-            );
-
-            console.log("ORDER OK:", res.data);
-
-            alert("🎉 Thanh toán thành công!");
-            sessionStorage.removeItem("checkoutItems");
-            window.location.href = "/";
-        } catch (error) {
-            console.log("Payment error:", error?.response?.data || error.message);
-            alert(error?.response?.data?.message || "Có lỗi xảy ra khi thanh toán");
+    // 🔥 tạo order trước
+    const res = await axios.post(
+      `${API_BASE}/api/orders`,
+      orderData,
+      {
+        headers: {
+          Authorization: `Bearer ${token}`,
+          "Content-Type": "application/json"
         }
-    };
+      }
+    );
+
+    // =============================
+    // 🔥 MOMO
+    // =============================
+    if (paymentMethod === "MOMO") {
+        toast.loading("Đang chuyển đến MoMo...");
+      const momoRes = await axios.post(
+        `${API_BASE}/api/momo/payment`,
+        {
+          amount: total,
+          orderInfo: `Thanh toán đơn ${res.data.order._id}`
+        }
+      );
+      toast.dismiss();
+
+      if (momoRes.data.payUrl) {
+        window.location.href = momoRes.data.payUrl;
+      } else {
+        toast.error("Không lấy được link MoMo");
+      }
+
+      return; // 🔥 dừng tại đây
+    }
+
+    // =============================
+    // 🔥 COD
+    // =============================
+    if (paymentMethod === "COD") {
+      await axios.put(
+        `${API_BASE}/api/cart/remove-selected`,
+        { items: formattedItems },
+        {
+          headers: {
+            Authorization: `Bearer ${token}`
+          }
+        }
+      );
+
+      toast.success("🎉 Đặt hàng thành công!");
+
+setTimeout(() => {
+  sessionStorage.removeItem("checkoutItems");
+  navigate("/cart");
+}, 2000); // ⏱ delay 2 giây
+    }
+
+  } catch (error) {
+    console.log("Payment error:", error?.response?.data || error.message);
+    console.log("MOMO ERROR:", error.response?.data);
+    toast.error(error?.response?.data?.message || "Có lỗi xảy ra khi thanh toán");
+  } finally {
+  setLoading(false); // ❗ luôn reset
+}
+};
 
     return (
         <div className="checkout-page">
+            
             <div className="checkout-wrapper">
 
                 <div className="checkout-steps">
@@ -159,7 +292,10 @@ function Checkout() {
 
                         return (
                             <div key={product._id} className="product-row">
-                                <img src={getImageUrl(product.image)} alt={product.name} />
+                                <img
+  src={getImageUrl(product.image) || "/placeholder.png"}
+  alt={product.name}
+/>
 
                                 <div className="product-info">
                                     <h4>{product.name}</h4>
@@ -190,22 +326,24 @@ function Checkout() {
                             <input
                                 placeholder="Họ và tên"
                                 value={customer.name}
-                                onChange={(e) =>
-                                    setCustomer({ ...customer, name: e.target.value })
-                                }
+                                onChange={(e) => {
+  const value = e.target.value.replace(/[^a-zA-ZÀ-ỹ\s]/g, "");
+  setCustomer({ ...customer, name: value });
+}}
                             />
                             <input
-                                placeholder="Số điện thoại"
-                                value={customer.phone}
-                                onChange={(e) =>
-                                    setCustomer({ ...customer, phone: e.target.value })
-                                }
-                            />
+                        placeholder="Số điện thoại"
+                        value={customer.phone}
+                        onChange={(e) => {
+                            const value = e.target.value.replace(/\D/g, ""); // 🔥 chỉ cho số
+                            setCustomer({ ...customer, phone: value });
+                        }}
+                        />
                             <input
                                 placeholder="Email"
                                 value={customer.email}
                                 onChange={(e) =>
-                                    setCustomer({ ...customer, email: e.target.value })
+                                    setCustomer({ ...customer, email: e.target.value.replace(/^\s+/, "") })
                                 }
                             />
                         </div>
@@ -251,7 +389,7 @@ function Checkout() {
                                 placeholder="Địa chỉ nhận hàng"
                                 value={customer.address}
                                 onChange={(e) =>
-                                    setCustomer({ ...customer, address: e.target.value })
+                                    setCustomer({ ...customer, address: e.target.value.replace(/^\s+/, "") })
                                 }
                             />
                         )}
@@ -261,9 +399,13 @@ function Checkout() {
                             <span className="price">{total.toLocaleString()}đ</span>
                         </div>
 
-                        <button className="primary-btn" onClick={handleNext}>
-                            Tiếp tục
-                        </button>
+                        <button
+  className="primary-btn"
+  onClick={handleNext}
+>
+  Tiếp tục
+</button>
+
                     </div>
                 )}
 
@@ -274,6 +416,14 @@ function Checkout() {
 
                         <div className="payment-method">
                             <label>
+  <input
+    type="radio"
+    checked={paymentMethod === "MOMO"}
+    onChange={() => setPaymentMethod("MOMO")}
+  />
+  Thanh toán MoMo
+</label>
+                            <label>
                                 <input
                                     type="radio"
                                     checked={paymentMethod === "COD"}
@@ -282,14 +432,7 @@ function Checkout() {
                                 Thanh toán khi nhận hàng
                             </label>
 
-                            <label>
-                                <input
-                                    type="radio"
-                                    checked={paymentMethod === "BANK"}
-                                    onChange={() => setPaymentMethod("BANK")}
-                                />
-                                Chuyển khoản ngân hàng
-                            </label>
+                            
                         </div>
 
                         <div className="checkout-summary">
@@ -297,9 +440,13 @@ function Checkout() {
                             <span className="price">{total.toLocaleString()}đ</span>
                         </div>
 
-                        <button className="primary-btn" onClick={handlePayment}>
-                            Thanh toán
-                        </button>
+                        <button
+  className="primary-btn"
+  onClick={handlePayment}
+  disabled={loading}
+>
+  {loading ? "Đang xử lý..." : "Thanh toán"}
+</button>
                     </div>
                 )}
 

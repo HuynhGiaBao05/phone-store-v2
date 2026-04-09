@@ -1,10 +1,10 @@
 ﻿.contact-page {
-    padding: 60px 20px;
-    background: #f1f3f6; /* nền xám nhẹ */
-    min-height: 100vh;
+    padding: 0 20px;
+    background: #f1f3f6;
+    min-height: calc(100vh - 70px); /* 🔥 trừ navbar */
     display: flex;
     justify-content: center;
-    align-items: flex-start;
+    align-items: center;
 }
 
 .contact-container {
@@ -43,19 +43,17 @@
 
     /* ===== INPUT ===== */
     .contact-form input,
-    .contact-form textarea {
-        width: 100%;
-        max-width: 500px;
-        margin: 0 auto;
-        background: #f5f6f8; /* xám nhẹ */
-        border: 1px solid #e5e7eb;
-        padding: 15px;
-        color: #111;
-        border-radius: 12px;
-        transition: 0.3s;
-        font-size: 15px;
-        font-weight: 500; /* chữ đậm hơn */
-    }
+.contact-form textarea,
+.contact-form button {
+    width: 100%;
+    max-width: 500px;
+
+    /* 🔥 QUAN TRỌNG */
+    display: block;
+    margin-left: auto;
+    margin-right: auto;
+}
+
 
         .contact-form input::placeholder,
         .contact-form textarea::placeholder {

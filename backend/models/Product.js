@@ -2,10 +2,10 @@ const mongoose = require("mongoose");
 
 const productSchema = new mongoose.Schema(
   {
-    name: { 
-      type: String, 
+    name: {
+      type: String,
       required: true,
-      trim: true 
+      trim: true
     },
 
     category: {
@@ -20,19 +20,17 @@ const productSchema = new mongoose.Schema(
       required: true,
     },
 
-    // ================= GIÁ GỐC =================
-    originalPrice: { 
-      type: Number, 
+    originalPrice: {
+      type: Number,
       required: true,
       min: 0
     },
 
-    // ================= DISCOUNT (%) =================
     discount: {
       type: Number,
       default: 0,
       min: 0,
-      max: 5,
+      max: 100 // 🔥 sửa luôn (bạn đang để 5)
     },
 
     stock: {
@@ -52,34 +50,55 @@ const productSchema = new mongoose.Schema(
       default: ""
     },
 
-    // ================= NGÀY HẾT KHUYẾN MÃI =================
     promoEndDate: {
       type: Date,
       default: null
     },
 
     image: {
-      type: String,
+      type: [String],
       default: null
     },
+
+    // 🔥🔥🔥 FIX QUAN TRỌNG: reviews PHẢI NẰM TRONG SCHEMA
+    reviews: [
+  {
+    user: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "User"
+    },
+    rating: {
+      type: Number,
+      required: true
+    },
+    comment: {
+      type: String,
+      default: ""
+    },
+
+    // 🔥 THÊM IMAGE REVIEW
+    images: [
+      {
+        type: String
+      }
+    ],
+
+    createdAt: {
+      type: Date,
+      default: Date.now
+    }
+  }
+]
   },
   { timestamps: true }
 );
 
-
-
-// =====================================================
-// 🔥 AUTO CLEAR promoEndDate NẾU discount = 0
 // =====================================================
 productSchema.pre("save", function (next) {
-
-  // Nếu discount = 0 thì không giữ ngày hết hạn
   if (this.discount === 0) {
     this.promoEndDate = null;
   }
-
   next();
 });
-
 
 module.exports = mongoose.model("Product", productSchema);

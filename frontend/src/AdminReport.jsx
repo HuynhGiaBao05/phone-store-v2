@@ -10,6 +10,7 @@ import {
   ResponsiveContainer,
   LabelList
 } from "recharts";
+import { toast } from "react-toastify";
 
 function AdminReport() {
 

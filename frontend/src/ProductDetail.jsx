@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import axios from "axios";
 import "./ProductDetail.css";
+import { toast } from "react-toastify";
 
 function ProductDetail() {
     const { id } = useParams();
@@ -49,10 +50,20 @@ function ProductDetail() {
             const diff = end - now;
 
             if (diff <= 0) {
-                setTimeLeft("00:00:00");
-                clearInterval(interval);
-                return;
-            }
+  setTimeLeft("00:00:00");
+
+  // 🔥 FIX CHÍNH Ở ĐÂY
+  setProduct(prev => ({
+    ...prev,
+    discount: 0,
+    price: prev.originalPrice,
+    isExpiringSoon: false,
+    promoEndDate: null
+  }));
+
+  clearInterval(interval);
+  return;
+}
 
             const hours = Math.floor(diff / (1000 * 60 * 60));
             const minutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
@@ -86,7 +97,7 @@ function ProductDetail() {
 
         // ❌ HẾT HÀNG
         if (isOutOfStock) {
-            setErrorMessage("❌ Sản phẩm đã hết hàng");
+setErrorMessage("❌ Sản phẩm đã hết hàng");
 return;
         }
 
@@ -104,13 +115,13 @@ return;
             );
 
             window.dispatchEvent(new Event("cartUpdated"));
-            alert("Đã thêm vào giỏ hàng 🛒");
+            toast.success("Đã thêm vào giỏ hàng 🛒");
 
         } catch (err) {
-            console.log(err);
-        }
+  console.log("ADD CART ERROR:", err.response?.data);
+  toast.error(err.response?.data?.message || "Lỗi thêm giỏ hàng");
+}
     };
-
     const handleBuyNow = async () => {
 
         // ❌ HẾT HÀNG
@@ -128,8 +139,27 @@ return;
         await handleAddToCart();
         navigate("/cart");
     };
+// 🔥 tính sao trung bình
+const avgRating =
+  product?.reviews?.length > 0
+    ? (
+        product.reviews.reduce((sum, r) => sum + r.rating, 0) /
+        product.reviews.length
+      ).toFixed(1)
+    : 0;
+    // 🔥 tính % từng sao (THÊM ĐOẠN NÀY)
+const starStats = [5,4,3,2,1].map(star => {
+  const count = product?.reviews?.filter(r => r.rating === star).length || 0;
 
+  const percent = product?.reviews?.length
+    ? ((count / product.reviews.length) * 100).toFixed(1)
+    : 0;
+
+  return { star, percent };
+});
     return (
+        console.log("PROMOTION:", product.promotion),
+        console.log("REVIEWS:", product.reviews),
         <div className="product-detail-page">
             <div className="detail-container">
 
@@ -138,7 +168,6 @@ return;
                     <div className="main-image">
                         <img src={selectedImage} alt={product.name} />
                     </div>
-
                     <div className="thumbnail-row">
                         {[product.image, product.image, product.image].map((img, index) => (
                             <img
@@ -150,6 +179,51 @@ return;
                             />
                         ))}
                     </div>
+                    {/* ================= ĐÁNH GIÁ ================= */}
+<div style={{ marginTop: 40 }}>
+
+  <h3>Đánh giá sản phẩm</h3>
+
+  {/* ⭐ TRUNG BÌNH */}
+  <div style={{ fontSize: 24, color: "orange" }}>
+    ⭐ {avgRating} / 5
+  </div>
+{product?.reviews?.length === 0 && (
+<div>Chưa có đánh giá</div>
+)}
+
+{product?.reviews?.map((r, index) => (
+  <div key={index} style={{
+    borderTop: "1px solid #eee",
+    padding: 10
+  }}>
+    <b>{r.user?.name || "User"}</b>
+
+    <div style={{ color: "orange" }}>
+      {"★".repeat(r.rating)}
+    </div>
+
+    <div>{r.comment}</div>
+
+    {/* 🔥 ẢNH */}
+    <div style={{ display: "flex", gap: 10 }}>
+      {r.images?.map((img, i) => (
+        <img
+          key={i}
+          src={`http://localhost:5000/uploads/${img}`}
+          style={{ width: 60 }}
+        />
+      ))}
+    </div>
+
+    <div style={{ fontSize: 12, color: "#999" }}>
+      {new Date(r.createdAt).toLocaleDateString()}
+    </div>
+  </div>
+))}
+
+</div>
+                    
                 </div>
 
                 {/* RIGHT */}
@@ -204,8 +278,7 @@ return;
                                 <div className="countdown-date">{endDateText}</div>
                             </div>
                         )}
-
-                    </div>
+</div>
 
                     <div className="button-group">
 
@@ -232,7 +305,20 @@ return;
                         <h3>Mô tả sản phẩm</h3>
                         <p>{product.description}</p>
                     </div>
-                    
+                    {/* 🔥 KHUYẾN MÃI */}
+{product.promotion && (
+  <div className="product-promotion">
+  <h3>🎁 Khuyến mãi</h3>
+
+  {product.promotion
+    .split("\n")
+    .filter(line => line.trim() !== "" && !/^\d+$/.test(line))
+    .map((line, index) => (
+      <div key={index}>• {line}</div>
+    ))}
+</div>
+)}
+                   
                 </div>
 
             </div>

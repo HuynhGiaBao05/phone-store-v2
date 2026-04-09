@@ -34,7 +34,7 @@ email = String(email);
 password = String(password);
 role = role ? String(role).toUpperCase() : "USER";
 
-// 🛡️ ROLE VALIDATION 
+// 🛡️ ROLE VALIDATION
 const allowedRoles = ["USER", "ADMIN","STAFF"];
 if (!allowedRoles.includes(role)) {
   return res.status(400).json({ message: "Invalid role" });
@@ -54,10 +54,10 @@ if (!email) {
 }
 
 if (!validateEmail(email)) {
-  res.status(400).json({
-  success: false,
-  error: "Email không hợp lệ"
-});
+  return res.status(400).json({
+    success: false,
+    error: "Email không hợp lệ"
+  });
 }
       const cleanEmail = email.trim().toLowerCase();
     const existingUser = await User.findOne({ email: cleanEmail });
@@ -84,8 +84,6 @@ const hashedPassword = await bcrypt.hash(password, 10);
     });
 await user.save();
 
-
-
     res.json({
   success: true,
   total: 1,
@@ -107,7 +105,7 @@ router.post("/login", async (req, res) => {
   try {
     let { email, password } = req.body;
 
-    
+   
 
     // 🛡️ USE XSS: sanitize input
     email = xss(String(email));
@@ -119,10 +117,10 @@ if (!email || !password) {
 }
 
 if (!validateEmail(email)) {
-  res.status(400).json({
-  success: false,
-  error: "Email không hợp lệ"
-});
+  return res.status(400).json({
+    success: false,
+    error: "Email không hợp lệ"
+  });
 }
 if (typeof email !== "string" || typeof password !== "string") {
   return res.status(400).json({ message: "Invalid input type" });
@@ -130,15 +128,18 @@ if (typeof email !== "string" || typeof password !== "string") {
     const cleanEmail = email.trim().toLowerCase();
 const user = await User.findOne({ email: cleanEmail }).select("+password");
     if (!user) {
-      return res.status(400).json({ success: false, message: "Invalid email or password" });
-    }
+  return res.status(400).json({
+    success: false,
+    type: "LOGIN_FAIL"
+  });
+}
 
     // 🛡️ USE ACCOUNT STATUS
     if (!user.isActive) {
       return res.status(403).json({
-        success: false,
-        type: "Account locked"
-      });
+  success: false,
+  type: "ACCOUNT_LOCKED"
+});
     }
 
     // 🛡️ USE VERIFY CHECK
@@ -148,8 +149,15 @@ const user = await User.findOne({ email: cleanEmail }).select("+password");
 
     // 🛡️ USE BRUTE FORCE PROTECTION
     if (user.lockUntil && user.lockUntil > Date.now()) {
-      return res.status(403).json({ success: false, message: "Try again later" });
-    }
+  const remaining = Math.ceil((user.lockUntil - Date.now()) / 1000);
+
+  return res.status(403).json({
+    success: false,
+    total: 0,
+    type: "ACCOUNT_LOCKED",
+    remainingTime: remaining
+  });
+}
 
 // 🛡️ LẤY IP + DEVICE
 const ip =
@@ -166,20 +174,29 @@ const agent = req.headers["user-agent"];
       user.loginAttempts = (user.loginAttempts || 0) + 1;
 
       if (user.loginAttempts >= 5) {
-        user.lockUntil = Date.now() + 60 * 1000;
-        user.loginAttempts = 0;
-      }
+  user.lockUntil = Date.now() + 60 * 1000;
+  user.loginAttempts = 0;
 
-        await user.save();
-
+  await user.save();
+  return res.status(403).json({
+    success: false,
+    type: "ACCOUNT_LOCKED",
+    remainingTime: 60
+  });
+}
+await user.save();
       await SecurityLog.create({
+  user: user._id,
   action: "LOGIN_FAIL",
   ip,
   userAgent: req.headers["user-agent"],
   status: "FAIL",
   description: "Sai mật khẩu",
 });
-      return res.status(400).json({ success: false, message: "Invalid email or password" });
+      return res.status(400).json({
+  success: false,
+  type: "LOGIN_FAIL"
+});
     }
 
     // ✅ LOGIN SUCCESS
@@ -189,8 +206,6 @@ const agent = req.headers["user-agent"];
     // ================= FIX MFA + ALERT =================
 
 const role = user.role?.toUpperCase();
-
-
 
 // ================= SAVE LOGIN HISTORY =================
 if (!user.loginHistory) {
@@ -214,8 +229,9 @@ if (role === "USER") {
   user.loginToken = alertToken; // FIX ALERT
   user.loginTokenExpire = Date.now() + 10 * 60 * 1000;
 
+  const BASE_URL = process.env.BASE_URL || "http://localhost:5000";
 
-  const denyLink = `http://localhost:5000/api/users/deny-login/${alertToken}`;
+const denyLink = `${BASE_URL}/api/users/deny-login/${alertToken}`;
 
   // 📧 EMAIL CẢNH BÁO
     await user.save();
@@ -248,6 +264,12 @@ if (role === "USER") {
     process.env.JWT_SECRET,
     { expiresIn: "1d" }
   );
+  //secure cookie (nếu có dùng cookie)để  sau này dùng refresh token:
+  res.cookie("token", token, {
+  httpOnly: true,
+  secure: process.env.NODE_ENV === "production",
+  sameSite: "strict"
+});
 
 // ✅ SECURITY LOG
 await SecurityLog.create({
@@ -311,15 +333,17 @@ await SecurityLog.create({
   status: "PENDING",
 });
 
-  const confirmLink = `http://localhost:5000/api/users/approve-login/${loginToken}`;
-  const denyLink = `http://localhost:5000/api/users/deny-login/${loginToken}`;
+  const BASE_URL = process.env.BASE_URL || "http://localhost:5000";
+
+const confirmLink = `${BASE_URL}/api/users/approve-login/${loginToken}`;
+const denyLink = `${BASE_URL}/api/users/deny-login/${loginToken}`;
 
   await sendEmail(
   user.email,
   "Xác nhận đăng nhập",
   `
   <div style="font-family:Arial,sans-serif;text-align:center;padding:20px">
-    
+   
     <h2>🔐 Xác nhận đăng nhập</h2>
     <p>Bạn vừa đăng nhập vào hệ thống</p>
 
@@ -330,12 +354,12 @@ await SecurityLog.create({
     </div>
 
     <div style="margin-top:20px">
-      <a href="${confirmLink}" 
+      <a href="${confirmLink}"
          style="background:#28a745;color:#fff;padding:12px 20px;border-radius:6px;text-decoration:none;font-weight:bold;margin-right:10px;display:inline-block">
         ✅ Đây là tôi
       </a>
 
-      <a href="${denyLink}" 
+      <a href="${denyLink}"
          style="background:#dc3545;color:#fff;padding:12px 20px;border-radius:6px;text-decoration:none;font-weight:bold;display:inline-block">
         ❌ Không phải là tôi
       </a>
@@ -351,19 +375,19 @@ await SecurityLog.create({
     message: "Vui lòng xác nhận email"
   });
 }
-return res.status(400).json({ message: "Login failed" });
+return res.status(400).json({
+  success: false,
+  type: "LOGIN_FAILED"
+});
 
 } catch (error) {
   console.error("LOGIN ERROR:", error);
   res.status(500).json({ message: error.message });
 }
 });
-    
-
    
 
-
-
+   
 
 // ===============================
 // SEND RESET PASSWORD OTP
@@ -403,12 +427,12 @@ if (user.otpCooldown && user.otpCooldown > Date.now()) {
   });
 }
 
-
-    
+   
 
     const otp = Math.floor(100000 + Math.random() * 900000).toString();
 
     user.otpCode = otp;
+    user.otpCooldown = Date.now() + 60 * 1000;
     user.otpExpire = Date.now() + 60 * 1000;
 
     await user.save();
@@ -440,7 +464,7 @@ router.post("/reset-password", async (req, res) => {
 // 🛡️ SQL INJECTION
 email = String(email);
 otp = String(otp);
-newPassword = String(newPassword);
+newPassword = xss(String(newPassword));
 
 //🛡️ XSS: sanitize input
 email = xss(String(email));
@@ -450,7 +474,6 @@ if (!email) {
   return res.status(400).json({ message: "Email is required" });
 }
 
-
 if (!validateEmail(email)) {
   return res.status(400).json({
     success: false,
@@ -459,7 +482,6 @@ if (!validateEmail(email)) {
 }
     const cleanEmail = email.trim().toLowerCase();
     const user = await User.findOne({ email: cleanEmail });
-
 
     if (!user) {
       return res.status(400).json({ message: "User not found" });
@@ -478,6 +500,8 @@ if (!newPassword || !validatePassword(newPassword)) {
     const hashedPassword = await bcrypt.hash(newPassword, 10);
 
     user.password = hashedPassword;
+    user.loginAttempts = 0;
+user.lockUntil = undefined;
     user.otpCode = undefined;
     user.otpExpire = undefined;
 
@@ -519,6 +543,11 @@ if (user.loginStatus === "APPROVED") {
     process.env.JWT_SECRET,
     { expiresIn: "1d" }
   );
+  res.cookie("token", token, {
+  httpOnly: true,
+  secure: process.env.NODE_ENV === "production",
+  sameSite: "strict"
+});
 
   user.loginStatus = null;
   user.loginToken = null; // 🔥 QUAN TRỌNG
@@ -658,12 +687,11 @@ if (!validateEmail(email)) {
     const cleanEmail = email.trim().toLowerCase();
     const user = await User.findOne({ email: cleanEmail });
 
-
     if (!user) {
       return res.status(400).json({ message: "User not found" });
     }
 
-    
+   
 
     if (user.isVerified) {
       return res.status(400).json({ message: "Account already verified" });
@@ -703,7 +731,7 @@ router.post("/logout", protect, async (req, res) => {
       userAgent: req.headers["user-agent"],
       status: "SUCCESS",
     });
-
+    res.clearCookie("token");
     res.json({
   success: true,
   type: "LOGOUT"
@@ -726,7 +754,6 @@ email = String(email);
 // 🛡️ XSS: sanitize input
 email = xss(String(email));
 
-
 // 🛡️ CHECK EMAIL FORMAT
 if (!email) {
   return res.status(400).json({ message: "Email is required" });
@@ -746,11 +773,9 @@ if (!user) {
   return res.status(400).json({ message: "User not found" });
 }
 
-
 if (user.otpExpire && user.otpExpire > Date.now()) {
   return res.status(429).json({ message: "OTP vừa gửi, thử lại sau" });
 }
-
 
    
 
@@ -834,7 +859,7 @@ router.put(
   authorizeRoles("ADMIN"),
   async (req, res) => {
     try {
-      
+     
 
 let { role } = req.body;
 role = String(role).toUpperCase();
@@ -909,15 +934,12 @@ router.get("/approve-login/:token", async (req, res) => {
           window.close();
         </script>
       `);
-      
+     
     }
-    
+   
 
     user.isLoginApproved = true;
 user.loginStatus = "APPROVED";
-
-
-
 
     // ✅ SECURITY LOG: LOGIN SUCCESS
 await SecurityLog.create({
@@ -931,7 +953,7 @@ await SecurityLog.create({
    res.send(`
   <h2>✅ Xác thực thành công</h2>
   <p>Bạn có thể đóng tab này</p>
-  
+ 
 `);
 
   } catch (err) {
@@ -953,7 +975,7 @@ router.get("/deny-login/:token", async (req, res) => {
 
         user.loginStatus = "DENIED";
         user.loginTokenExpire = null;  
-        user.loginToken = null; 
+        user.loginToken = null;
 
       if (user.role === "USER") {
         user.isActive = false;
@@ -971,8 +993,6 @@ router.get("/deny-login/:token", async (req, res) => {
   } catch {
     res.send("Có lỗi xảy ra");
   }
-
-
 
 });
 
@@ -1045,6 +1065,11 @@ if (user.loginStatus === "APPROVED") {
     process.env.JWT_SECRET,
     { expiresIn: "1d" }
   );
+  res.cookie("token", token, {
+  httpOnly: true,
+  secure: process.env.NODE_ENV === "production",
+  sameSite: "strict"
+});
   user.loginToken = null;
   user.loginTokenExpire = null;
 

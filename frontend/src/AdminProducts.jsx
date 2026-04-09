@@ -1,6 +1,8 @@
 import { useEffect, useState } from "react";
 import axios from "axios";
 import "./AdminProducts.css";
+import { toast } from "react-toastify";
+import { createPortal } from "react-dom";
 
 function AdminProducts() {
 
@@ -36,7 +38,7 @@ function AdminProducts() {
     // ================= FETCH =================
 
     const fetchProducts = async () => {
-        const res = await axios.get("http://localhost:5000/api/products?limit=100")
+        const res = await axios.get("http://localhost:5000/api/products?limit=100");
         setProducts(res.data.products || res.data);
     };
 
@@ -51,13 +53,22 @@ function AdminProducts() {
     };
 
     useEffect(() => {
-        const loadData = async () => {
-            await fetchProducts();
-            await fetchCategories();
-            await fetchBrands();
-        };
-        loadData();
-    }, []);
+    const loadData = async () => {
+        await fetchProducts();
+        await fetchCategories();
+        await fetchBrands();
+    };
+
+    loadData();
+
+    // 🔥 THÊM ĐOẠN NÀY
+    const interval = setInterval(() => {
+        fetchProducts();
+    }, 5000); // 5s
+
+    return () => clearInterval(interval);
+
+}, []);
 
     // ================= FILTER =================
 
@@ -65,7 +76,7 @@ function AdminProducts() {
 
     if (selectedCategory !== "all") {
         filteredProducts = filteredProducts.filter(
-            (p) => p.category?._id === selectedCategory
+            (p) => (p.category?._id || p.category) === selectedCategory
         );
     }
 
@@ -74,15 +85,11 @@ function AdminProducts() {
     );
 
     if (sortPrice === "asc") {
-        filteredProducts.sort(
-            (a, b) => (a.originalPrice || 0) - (b.originalPrice || 0)
-        );
+        filteredProducts.sort((a, b) => (a.originalPrice || 0) - (b.originalPrice || 0));
     }
 
     if (sortPrice === "desc") {
-        filteredProducts.sort(
-            (a, b) => (b.originalPrice || 0) - (a.originalPrice || 0)
-        );
+        filteredProducts.sort((a, b) => (b.originalPrice || 0) - (a.originalPrice || 0));
     }
 
     // ================= PAGINATION =================
@@ -109,9 +116,8 @@ await axios.delete(`http://localhost:5000/api/products/${id}`, {
 
     const handleSave = async () => {
         try {
-
             if (!newProduct.name || !newProduct.category || !newProduct.brand) {
-                alert("Vui lòng nhập đầy đủ Tên, Danh mục và Thương hiệu!");
+                toast.error("Vui lòng nhập đầy đủ Tên, Danh mục và Thương hiệu!");
                 return;
             }
 
@@ -151,7 +157,7 @@ await axios.delete(`http://localhost:5000/api/products/${id}`, {
                 );
             }
 
-            alert("Lưu sản phẩm thành công!");
+            toast.success("Lưu sản phẩm thành công!");
             setShowModal(false);
             setEditingProduct(null);
             fetchProducts();
@@ -167,6 +173,7 @@ await axios.delete(`http://localhost:5000/api/products/${id}`, {
     const handleImageChange = (e) => {
         const file = e.target.files[0];
         if (!file) return;
+
         setNewProduct({ ...newProduct, image: file });
         setPreview(URL.createObjectURL(file));
     };
@@ -176,8 +183,9 @@ await axios.delete(`http://localhost:5000/api/products/${id}`, {
 
             <h2 className="page-title">Quản lý sản phẩm</h2>
 
-            <div className="filter-bar">
-<input
+            {/* FILTER */}
+<div className="filter-bar">
+                <input
                     placeholder="🔍 Tìm sản phẩm..."
                     value={search}
                     onChange={(e) => {
@@ -195,9 +203,7 @@ await axios.delete(`http://localhost:5000/api/products/${id}`, {
                 >
                     <option value="all">Tất cả</option>
                     {categories.map((c) => (
-                        <option key={c._id} value={c._id}>
-                            {c.name}
-                        </option>
+                        <option key={c._id} value={c._id}>{c.name}</option>
                     ))}
                 </select>
 
@@ -213,30 +219,28 @@ await axios.delete(`http://localhost:5000/api/products/${id}`, {
                     <option value="desc">Giá giảm ↓</option>
                 </select>
 
-                <button
-                    className="btn-primary"
-                    onClick={() => {
-                        setEditingProduct(null);
-                        setNewProduct({
-                            name: "",
-                            category: "",
-                            brand: "",
-                            originalPrice: "",
-                            discount: "",
-                            stock: "",
-                            description: "",
-                            promotion: "",
-                            promoEndDate: "",
-                            image: null
-                        });
-                        setPreview(null);
-                        setShowModal(true);
-                    }}
-                >
+                <button className="btn-primary" onClick={() => {
+                    setEditingProduct(null);
+                    setPreview(null);
+                    setNewProduct({
+                        name: "",
+                        category: "",
+                        brand: "",
+                        originalPrice: "",
+                        discount: "",
+                        stock: "",
+                        description: "",
+                        promotion: "",
+                        promoEndDate: "",
+                        image: null
+                    });
+                    setShowModal(true);
+                }}>
                     + Thêm sản phẩm
                 </button>
             </div>
 
+            {/* TABLE */}
             <div className="table-card">
                 <table className="product-table">
                     <thead>
@@ -257,12 +261,10 @@ await axios.delete(`http://localhost:5000/api/products/${id}`, {
 
                             return (
                                 <tr key={p._id}>
-                                    <td>
-<img src={p.image} className="product-img" alt="" />
-                                    </td>
+                                    <td><img src={p.image} className="product-img" alt="" /></td>
                                     <td>{p.name}</td>
-                                    <td>
-                                        {p.discount > 0 && (
+<td>
+{p.discount > 0 && (
                                             <span className="old-price">
                                                 {p.originalPrice?.toLocaleString()} ₫
                                             </span>
@@ -276,37 +278,37 @@ await axios.delete(`http://localhost:5000/api/products/${id}`, {
                                     </td>
                                     <td>{p.stock}</td>
                                     <td className="actions">
-                                        <button
-                                            className="btn-edit"
-                                            onClick={() => {
-                                                setEditingProduct(p);
-                                                setNewProduct({
-                                                    name: p.name || "",
-                                                    category: p.category?._id || "",
-                                                    brand: p.brand?._id || "",
-                                                    originalPrice: p.originalPrice || "",
-                                                    discount: p.discount || "",
-                                                    stock: p.stock || "",
-                                                    description: p.description || "",
-                                                    promotion: p.promotion || "",
-                                                    promoEndDate: p.promoEndDate
-                                                        ? p.promoEndDate.slice(0, 16)
-                                                        : "",
-                                                    image: null
-                                                });
-                                                setPreview(p.image || null);
-                                                setShowModal(true);
-                                            }}
-                                        >
+                                        <button className="btn-edit" onClick={() => {
+                                            setEditingProduct(p);
+                                            setPreview(p.image || null);
+                                            setNewProduct({
+                                                name: p.name || "",
+                                                category:
+                                            p.category && typeof p.category === "object"
+                                                ? p.category._id
+                                                : p.category || "",
+                                                  brand:
+                                            p.brand && typeof p.brand === "object"
+                                                ? p.brand._id
+                                                : p.brand || "",
+                                                originalPrice: p.originalPrice || "",
+                                                discount: p.discount || "",
+                                                stock: p.stock || "",
+                                                description: p.description || "",
+                                                promotion: p.promotion || "",
+                                                promoEndDate: p.promoEndDate
+                                                    ? p.promoEndDate.slice(0, 16)
+                                                    : "",
+                                                image: null
+                                            });
+                                            setShowModal(true);
+                                        }}>
                                             Sửa
                                         </button>
 
-                                        <button
-                                            className="btn-delete"
-                                            onClick={() => handleDelete(p._id)}
-                                        >
+                                        <button className="btn-delete" onClick={() => handleDelete(p._id)}>
                                             Xóa
-</button>
+                                        </button>
                                     </td>
                                 </tr>
                             );
@@ -314,35 +316,26 @@ await axios.delete(`http://localhost:5000/api/products/${id}`, {
                     </tbody>
                 </table>
 
-                {/* ================= PAGINATION MODIFIED ================= */}
                 <div className="pagination">
-                    <button
-                        className="page-btn"
-                        disabled={currentPage === 1}
-                        onClick={() => setCurrentPage(currentPage - 1)}
-                    >
-                        ←
-                    </button>
+                    <button disabled={currentPage === 1}
+                        onClick={() => setCurrentPage(currentPage - 1)}>←</button>
 
-                    <span className="current-page">{currentPage}</span>
-
-                    <button
-                        className="page-btn"
-                        disabled={currentPage >= totalPages}
-                        onClick={() => setCurrentPage(currentPage + 1)}
-                    >
-                        →
-                    </button>
+                    <span>{currentPage}</span>
+<button disabled={currentPage >= totalPages}
+onClick={() => setCurrentPage(currentPage + 1)}>→</button>
                 </div>
             </div>
 
-            {showModal && (
-                <div className="modal-overlay" onClick={() => setShowModal(false)}>
-                    <div className="modal-content" onClick={(e) => e.stopPropagation()}>
-                        <h3>{editingProduct ? "Sửa sản phẩm" : "Thêm sản phẩm"}</h3>
-<div className="product-form-grid">
-  <div className="form-col">
-                                <input
+            {showModal &&
+                createPortal(
+                    <div className="modal-overlay" onClick={() => setShowModal(false)}>
+                        <div className="modal-content" onClick={(e) => e.stopPropagation()}>
+
+                            <h3>{editingProduct ? "Sửa sản phẩm" : "Thêm sản phẩm"}</h3>
+
+                            <div className="product-form-grid">
+
+                                <input className="field-name"
                                     placeholder="Tên sản phẩm"
                                     value={newProduct.name}
                                     onChange={(e) =>
@@ -350,7 +343,7 @@ await axios.delete(`http://localhost:5000/api/products/${id}`, {
                                     }
                                 />
 
-                                <select
+                                <select className="field-category"
                                     value={newProduct.category}
                                     onChange={(e) =>
                                         setNewProduct({ ...newProduct, category: e.target.value })
@@ -358,13 +351,11 @@ await axios.delete(`http://localhost:5000/api/products/${id}`, {
                                 >
                                     <option value="">Chọn danh mục</option>
                                     {categories.map((c) => (
-                                        <option key={c._id} value={c._id}>
-                                            {c.name}
-                                        </option>
+                                        <option key={c._id} value={c._id}>{c.name}</option>
                                     ))}
                                 </select>
 
-                                <select
+                                <select className="field-brand"
                                     value={newProduct.brand}
                                     onChange={(e) =>
                                         setNewProduct({ ...newProduct, brand: e.target.value })
@@ -372,13 +363,11 @@ await axios.delete(`http://localhost:5000/api/products/${id}`, {
                                 >
                                     <option value="">Chọn thương hiệu</option>
                                     {brands.map((b) => (
-<option key={b._id} value={b._id}>
-                                            {b.name}
-                                        </option>
+                                        <option key={b._id} value={b._id}>{b.name}</option>
                                     ))}
                                 </select>
 
-                                <input
+                                <input className="field-price"
                                     type="number"
                                     placeholder="Giá gốc"
                                     value={newProduct.originalPrice}
@@ -386,20 +375,18 @@ await axios.delete(`http://localhost:5000/api/products/${id}`, {
                                         setNewProduct({ ...newProduct, originalPrice: e.target.value })
                                     }
                                 />
-                            </div>
 
-                            <div className="form-col">
-                                <input
+                                <input className="field-discount"
                                     type="number"
                                     placeholder="Giảm giá (%)"
-                                    value={newProduct.discount}
+value={newProduct.discount}
                                     onChange={(e) =>
-                                        setNewProduct({ ...newProduct, discount: e.target.value })
+setNewProduct({ ...newProduct, discount: e.target.value })
                                     }
                                 />
 
                                 {Number(newProduct.discount) > 0 && (
-                                    <input
+                                    <input className="field-date"
                                         type="datetime-local"
                                         value={newProduct.promoEndDate}
                                         onChange={(e) =>
@@ -408,7 +395,7 @@ await axios.delete(`http://localhost:5000/api/products/${id}`, {
                                     />
                                 )}
 
-                                <input
+                                <input className="field-stock"
                                     type="number"
                                     placeholder="Tồn kho"
                                     value={newProduct.stock}
@@ -417,40 +404,40 @@ await axios.delete(`http://localhost:5000/api/products/${id}`, {
                                     }
                                 />
 
-                                <input type="file" onChange={handleImageChange} />
+                                <div className="field-image">
+                                    <input type="file" onChange={handleImageChange} />
+                                    {preview && <img src={preview} className="preview-img" alt="" />}
+                                </div>
 
-                                {preview && <img src={preview} className="preview-img" alt="" />}
                             </div>
+
+                            <textarea
+                                placeholder="Mô tả sản phẩm"
+                                value={newProduct.description}
+                                onChange={(e) =>
+                                    setNewProduct({ ...newProduct, description: e.target.value })
+                                }
+                            />
+
+                            <textarea
+                                placeholder="Nội dung khuyến mãi"
+                                value={newProduct.promotion}
+                                onChange={(e) =>
+                                    setNewProduct({ ...newProduct, promotion: e.target.value })
+                                }
+                            />
+
+                            <div className="modal-actions">
+                                <button className="btn-primary" onClick={handleSave}>Lưu</button>
+                                <button className="btn-delete" onClick={() => setShowModal(false)}>Hủy</button>
+                            </div>
+
                         </div>
+                    </div>,
+                    document.body
+                )
+            }
 
-                        <textarea
-                            placeholder="Mô tả sản phẩm"
-                            value={newProduct.description}
-                            onChange={(e) =>
-                                setNewProduct({ ...newProduct, description: e.target.value })
-                            }
-                        />
-
-                        <textarea
-                            placeholder="Nội dung khuyến mãi"
-                            value={newProduct.promotion}
-                            onChange={(e) =>
-setNewProduct({ ...newProduct, promotion: e.target.value })
-                            }
-                        />
-
-                        <div className="modal-actions">
-                            <button className="btn-primary" onClick={handleSave}>
-                                Lưu
-                            </button>
-
-                            <button className="btn-delete" onClick={() => setShowModal(false)}>
-                                Hủy
-                            </button>
-                        </div>
-                    </div>
-                </div>
-            )}
         </div>
     );
 }

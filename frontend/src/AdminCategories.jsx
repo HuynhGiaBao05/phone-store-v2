@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import axios from "axios";
 import "./AdminCategories.css";
+import { toast } from "react-toastify";
 
 function AdminCategories() {
   const [categories, setCategories] = useState([]);

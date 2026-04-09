@@ -43,6 +43,8 @@ router.post("/add", protect, async (req, res) => {
         }
 
         const product = await Product.findById(productId);
+        console.log("PRODUCT:", product);
+console.log("STOCK:", product.stock);
 
         // ❌ FIX: KHÔNG dùng isActive nếu schema chưa có
         if (!product || product.stock <= 0) {
@@ -189,5 +191,62 @@ router.delete("/remove/:productId", protect, async (req, res) => {
         res.status(500).json({ message: error.message });
     }
 });
+// =====================================================
+// 🔥 CLEAR CART (SAU KHI THANH TOÁN)
+// =====================================================
+router.delete("/clear", protect, async (req, res) => {
+  try {
+    const cart = await Cart.findOne({ user: req.user._id });
 
+    if (!cart) {
+      return res.json({ message: "Cart already empty" });
+    }
+
+    cart.items = [];
+
+    await cart.save();
+
+    res.json({ message: "Cart cleared" });
+
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+});
+// =====================================================
+// 🔥 REMOVE SELECTED ITEMS AFTER CHECKOUT
+// =====================================================
+router.put("/remove-selected", protect, async (req, res) => {
+  try {
+    const { items } = req.body; // 🔥 danh sách sản phẩm đã mua
+
+    const cart = await Cart.findOne({ user: req.user._id });
+
+    if (!cart) {
+      return res.status(404).json({ message: "Cart not found" });
+    }
+
+    // 🔥 TRỪ ĐÚNG SẢN PHẨM ĐÃ MUA
+    cart.items = cart.items.map(cartItem => {
+      const purchased = items.find(i =>
+        i.product.toString() === cartItem.product.toString()
+      );
+
+      if (purchased) {
+        return {
+          ...cartItem._doc,
+          quantity: cartItem.quantity - purchased.quantity // 🔥 TRỪ SỐ LƯỢNG
+        };
+      }
+
+      return cartItem;
+    }).filter(item => item.quantity > 0); // 🔥 XÓA nếu = 0
+
+    await cart.save();
+
+    res.json({ message: "Cart updated after checkout" });
+
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+});
 module.exports = router;

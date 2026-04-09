@@ -7,7 +7,7 @@ import axios from "axios";
 import RecentOrders from "./components/RecentOrders";
 import TopProducts from "./components/TopProducts";
 import ActivityLogs from "./components/ActivityLogs";
-
+import { toast } from "react-toastify";
 
 
 function AdminDashboard() {

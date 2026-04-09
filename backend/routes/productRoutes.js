@@ -33,7 +33,6 @@ async function calculateProductPrice(product) {
 
       product.discount = 0;
       product.promoEndDate = null;
-      await product.save();
 
       activeDiscount = 0;
       finalPrice = product.originalPrice;
@@ -60,12 +59,16 @@ async function calculateProductPrice(product) {
   }
 
   return {
-    ...product._doc,
+    ...product.toObject(),
     price: finalPrice,
     discount: activeDiscount,
     isExpiringSoon, // 🔥 TRẢ VỀ CHO FRONTEND
-    image: product.image
-  ? `http://localhost:5000/uploads/${product.image}`
+   image: product.image
+  ? `http://localhost:5000/uploads/${
+      Array.isArray(product.image)
+        ? product.image[0]
+        : product.image
+    }`
   : null,
   };
 }
@@ -243,7 +246,7 @@ router.put(
           }
         }
 
-          product.images = req.files.map(f => f.filename);
+          product.image = req.file.filename; // ✅ đúng với single
       }
 
       await product.save();
@@ -271,28 +274,42 @@ router.delete(
   protect,
   authorizeRoles("ADMIN", "STAFF"),
   async (req, res) => {
+    console.log("USER:", req.user);
+      console.log("PARAM ID:", req.params.id);
+
     try {
 
       const product = await Product.findById(req.params.id);
       if (!product) {
         return res.status(404).json({ message: "Product not found" });
       }
-
+if (!req.user) {
+  return res.status(401).json({ message: "Unauthorized" });
+}
       if (product.image) {
-        const imagePath = path.join(__dirname, "../uploads", product.image);
-        if (fs.existsSync(imagePath)) {
-          fs.unlinkSync(imagePath);
-        }
-      }
+  try {
+    const imagePath = path.join(__dirname, "../uploads", product.image);
+
+    if (fs.existsSync(imagePath)) {
+      fs.unlinkSync(imagePath);
+    } else {
+      console.log("⚠️ File not found:", imagePath);
+    }
+
+  } catch (err) {
+    console.log("⚠️ Delete image error:", err.message);
+  }
+
+}
 
       await Product.findByIdAndDelete(req.params.id);
 
 // 📝 ACTIVITY LOG: delete sản phẩm
-await ActivityLog.create({
-  user: req.user._id,
-  action: "DELETE_PRODUCT",
-  description: `Xóa sản phẩm ${product.name}`,
-});
+//await ActivityLog.create({
+  //user: req.user._id,
+ // action: "DELETE_PRODUCT",
+  //description: `Xóa sản phẩm ${product.name}`,
+//});
 
       res.json({ message: "Product deleted successfully" });
 
@@ -338,8 +355,9 @@ router.get("/:id", async (req, res) => {
   try {
 
     const product = await Product.findById(req.params.id)
-      .populate("category")
-      .populate("brand");
+  .populate("category")
+  .populate("brand")
+  .populate("reviews.user", "name email");
 
     if (!product) {
       return res.status(404).json({ message: "Product not found" });
@@ -350,8 +368,63 @@ router.get("/:id", async (req, res) => {
     res.json(updatedProduct);
 
   } catch (error) {
+     console.error("🔥 ERROR GET PRODUCT:", error);
     res.status(500).json({ message: error.message });
   }
 });
+// =====================================================
+// USER - ĐÁNH GIÁ SẢN PHẨM
+// =====================================================
+// 🔥 upload nhiều ảnh
+router.post(
+  "/:id/review",
+  protect,
+  upload.array("images", 5), // 🔥 tối đa 5 ảnh
+  async (req, res) => {
+    try {
+      const { rating, comment } = req.body;
 
+      const product = await Product.findById(req.params.id);
+
+      if (!product) {
+        return res.status(404).json({ message: "Không tìm thấy sản phẩm" });
+      }
+
+      // 🔥 lấy list ảnh
+      const imageUrls = req.files
+        ? req.files.map(file => file.filename)
+        : [];
+
+      const review = {
+        user: req.user._id,
+        rating: Number(rating),
+        comment,
+        images: imageUrls // 🔥 thêm ảnh
+      };
+
+      if (!product.reviews) {
+        product.reviews = [];
+      }
+// ❌ CHẶN REVIEW 2 LẦN
+const alreadyReviewed = product.reviews.find(
+  r => r.user.toString() === req.user._id.toString()
+);
+
+if (alreadyReviewed) {
+  return res.status(400).json({
+    message: "Bạn đã đánh giá rồi"
+  });
+}
+      product.reviews.push(review);
+
+      await product.save();
+
+      res.json({ message: "Đánh giá thành công" });
+
+    } catch (err) {
+      console.error(err);
+      res.status(500).json({ message: err.message });
+    }
+  }
+);
 module.exports = router;
