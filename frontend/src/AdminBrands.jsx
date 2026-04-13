@@ -24,14 +24,19 @@ function AdminBrands() {
       return;
     }
 
-    await axios.post("http://localhost:5000/api/brands", {
-      name: newBrand,
-    });
+   try {
+  await axios.post("http://localhost:5000/api/brands", {
+    name: newBrand,
+  });
 
-    setNewBrand("");
-    fetchBrands();
+  toast.success("🎉 Thêm thương hiệu thành công!");
+  setNewBrand("");
+  fetchBrands();
+
+} catch (err) {
+  toast.error(err.response?.data?.message || "❌ Lỗi!");
+}
   };
-
   const handleDelete = async (id) => {
   if (!window.confirm("Bạn có chắc muốn xóa?")) return;
 

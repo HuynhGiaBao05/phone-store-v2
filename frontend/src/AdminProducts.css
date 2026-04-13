@@ -366,10 +366,20 @@ color: #7c3aed;
 }
 /* PREVIEW IMAGE */
 
-.preview-img {
-    width: 120px;
-    border-radius: 10px;
+.field-image div {
+    display: flex;
+    flex-wrap: nowrap; /* ⬅️ KHÔNG xuống dòng */
+    gap: 8px;
     margin-top: 10px;
+    justify-content: flex-start;
+}
+
+.preview-img {
+    width: 100%;
+    height: 100%;
+    object-fit: contain; /* ⭐ QUAN TRỌNG: không cắt ảnh */
+    object-position: center;
+    display: block;
 }
 
 /* ================= FIX FORM GRID ================= */
@@ -443,11 +453,89 @@ color: #7c3aed;
 }
 
 .field-image {
-    grid-column: 1;
+    grid-column: 1 / -1;
+    width: 100%;
+    min-width: 0;
+    overflow: hidden; /* 🔥 chặn tràn toàn bộ field */
 }
 /* ⬅️ sửa: cho ngang hàng tồn kho */
 
 /* mô tả full */
 .field-description {
     grid-column: 1 / -1;
+}
+
+.image-preview-list {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, 70px);
+    gap: 10px;
+    width: 100%;
+    max-width: 100%;
+    align-items: start;
+    overflow-x: hidden;
+}
+.img-preview-wrapper {
+    position: relative;
+    width: 70px;
+    height: 70px;
+    border-radius: 10px;
+    border: 1px solid #e2e8f0;
+    overflow: hidden;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: #fff;
+}
+
+.remove-img-btn {
+    position: absolute;
+    top: -6px;
+    right: -6px;
+    width: 18px;
+    height: 18px;
+    font-size: 12px;
+    background: rgba(239, 68, 68, 0.95);
+    border: 1.5px solid white;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    z-index: 20;
+    box-shadow: 0 2px 6px rgba(0,0,0,0.18);
+    transition: 0.2s;
+}
+    .remove-img-btn:hover {
+        background: #dc2626;
+        transform: scale(1.08);
+    }
+
+    .img-wrapper {
+  position: relative;
+}
+
+.remove-btn {
+  position: absolute;
+  top: 5px;
+  right: 5px;
+  transform: scale(0.8);
+
+  background: red;
+  color: #fff;
+  border: none;
+  border-radius: 50%;
+
+  width: 24px;
+  height: 24px;
+  cursor: pointer;
+
+  opacity: 0; /* 👈 ẩn đi */
+  transition: 0.2s ease;
+}
+
+/* 👇 hover vào ảnh mới hiện */
+.img-wrapper:hover .remove-btn {
+  opacity: 1;
+    transform: scale(1);
+
 }

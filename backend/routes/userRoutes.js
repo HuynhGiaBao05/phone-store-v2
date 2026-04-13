@@ -236,8 +236,7 @@ const denyLink = `${BASE_URL}/api/users/deny-login/${alertToken}`;
   // 📧 EMAIL CẢNH BÁO
     await user.save();
 
-  await sendEmail(
-    user.email,
+  sendEmail(user.email,
     "Cảnh báo đăng nhập",
     `
       <h3>🔐 Cảnh báo đăng nhập</h3>
@@ -256,7 +255,7 @@ const denyLink = `${BASE_URL}/api/users/deny-login/${alertToken}`;
          ❌ Không phải tôi
       </a>
     `
-  );
+  ).catch(err => console.error("SendEmail Error:", err));
 
   // 👉 LOGIN LUÔN
   const token = jwt.sign(
@@ -276,7 +275,7 @@ await SecurityLog.create({
   user: user._id,
   action: "LOGIN_SUCCESS",
   ip,
-  userAgent: agent,
+  userAgent: agent, 
   status: "SUCCESS",
 });
 
@@ -292,7 +291,6 @@ await SecurityLog.create({
   }
 });
 }
-
 // ================= ADMIN / STAFF → MFA CHẶN LOGIN =================
 if (role === "ADMIN" || role === "STAFF") {
 
@@ -302,9 +300,9 @@ if (role === "ADMIN" || role === "STAFF") {
   user.loginTokenExpire > Date.now()
 ) {
     return res.status(429).json({
-      success: true,
-      type: "Đã gửi xác nhận, kiểm tra email"
-    });
+  requireApproval: true,
+  loginToken: user.loginToken
+});
   }
 
   // 🔥 nếu token hết hạn → reset
@@ -317,7 +315,7 @@ if (role === "ADMIN" || role === "STAFF") {
   const loginToken = crypto.randomBytes(32).toString("hex");
 
   user.loginToken = loginToken;
-  user.loginTokenExpire = Date.now() + 30 * 1000;
+  user.loginTokenExpire = Date.now() + 2 * 60 * 1000;
   user.isLoginApproved = false;
 
   user.loginStatus = "PENDING";
@@ -338,7 +336,7 @@ await SecurityLog.create({
 const confirmLink = `${BASE_URL}/api/users/approve-login/${loginToken}`;
 const denyLink = `${BASE_URL}/api/users/deny-login/${loginToken}`;
 
-  await sendEmail(
+  sendEmail(
   user.email,
   "Xác nhận đăng nhập",
   `
@@ -367,7 +365,7 @@ const denyLink = `${BASE_URL}/api/users/deny-login/${loginToken}`;
 
   </div>
   `
-);
+).catch(err => console.error("Admin Login Email Error:", err));
 
   return res.json({
     requireApproval: true,
@@ -380,12 +378,11 @@ return res.status(400).json({
   type: "LOGIN_FAILED"
 });
 
-} catch (error) {
+} catch (error) {   // ✅ giờ catch hợp lệ
   console.error("LOGIN ERROR:", error);
   res.status(500).json({ message: error.message });
 }
 });
-   
 
    
 
@@ -437,11 +434,10 @@ if (user.otpCooldown && user.otpCooldown > Date.now()) {
 
     await user.save();
 
-    await sendEmail(
-      cleanEmail,
+    sendEmail(cleanEmail,
       "Reset Password OTP",
       `Your password reset OTP is: ${otp}`
-    );
+    ).catch(err => console.error("OTP Email Error:", err));
 
    res.json({
   success: true,
@@ -644,11 +640,7 @@ const hashedPassword = await bcrypt.hash(password, 10);
     await user.save();
 
     // ✅ BẬT LẠI GỬI EMAIL
-    await sendEmail(
-      cleanEmail,
-      "OTP Verification",
-      `Your OTP code is: ${otp}`
-    );
+    sendEmail(cleanEmail, "OTP Verification", `Your OTP code is: ${otp}`).catch(err => console.error("Register Email Error:", err));
 
     res.json({
   success: true,
@@ -791,11 +783,11 @@ if (user.otpExpire && user.otpExpire > Date.now()) {
 
     await user.save();
 
-    await sendEmail(
-      cleanEmail,
-      "Resend OTP Verification",
-      `Your new OTP code is: ${newOtp}`
-    );
+    sendEmail(
+  cleanEmail,
+  "Resend OTP Verification",
+  `Your new OTP code is: ${newOtp}`
+).catch(err => console.error("Resend OTP Error:", err));
 
     res.json({ message: "New OTP sent to your email" });
 

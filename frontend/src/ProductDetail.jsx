@@ -12,7 +12,11 @@ function ProductDetail() {
     const [loginMessage, setLoginMessage] = useState("");
     const [errorMessage, setErrorMessage] = useState("");
     const navigate = useNavigate();
-
+const getImageUrl = (img) => {
+  if (!img) return "/placeholder.png";
+  if (typeof img === "string" && img.startsWith("http")) return img;
+  return `http://localhost:5000/uploads/${img}`;
+};
     // ✅ THÊM CHECK HẾT HÀNG
     const isOutOfStock = product?.stock <= 0;
 
@@ -20,9 +24,17 @@ function ProductDetail() {
         axios
             .get(`http://localhost:5000/api/products/${id}`)
             .then((res) => {
-                setProduct(res.data);
-                setSelectedImage(res.data.image);
-            })
+  const product = res.data;
+
+  // 🔥 THÊM ĐOẠN NÀY
+  if (product.status === "COMING_SOON") {
+    navigate(`/coming-soon/${product._id}`);
+    return;
+  }
+
+  setProduct(product);
+  setSelectedImage(product.images?.[0] || "/placeholder.png");
+})
             .catch((err) => {
                 if (err.response?.status === 404) {
                     setErrorMessage("Sản phẩm không tồn tại");
@@ -91,8 +103,7 @@ function ProductDetail() {
             end.toLocaleDateString("vi-VN") +
             " · TP.HCM";
     }
-
-    // ================= ADD TO CART =================
+// ================= ADD TO CART =================
     const handleAddToCart = async () => {
 
         // ❌ HẾT HÀNG
@@ -102,10 +113,29 @@ return;
         }
 
         const token = localStorage.getItem("token");
-        if (!token) {
-            setLoginMessage("Vui lòng đăng nhập để thêm vào giỏ hàng");
-            return;
+       if (!token) {
+  toast.warning(
+    <div className="toast-login">
+      <div>⚠️ Vui lòng đăng nhập để thêm vào giỏ hàng</div>
+
+      <button
+        className="toast-login-btn"
+        onClick={() =>
+          navigate("/login", {
+            state: {
+              from: window.location.pathname
+            }
+          })
         }
+      >
+        👉 Đăng nhập
+      </button>
+    </div>
+  );
+  return;
+
+}
+
 
         try {
             await axios.post(
@@ -132,9 +162,28 @@ return;
 
         const token = localStorage.getItem("token");
         if (!token) {
-            setLoginMessage("Vui lòng đăng nhập để mua sản phẩm");
-            return;
+  toast.warning(
+    <div className="toast-login">
+      <div>⚠️ Vui lòng đăng nhập để mua hàng</div>
+
+      <button
+        className="toast-login-btn"
+        onClick={() =>
+          navigate("/login", {
+            state: {
+              from: window.location.pathname
+            }
+          })
         }
+      >
+        👉 Đăng nhập
+      </button>
+    </div>
+  );
+  return;
+}
+
+
 
         await handleAddToCart();
         navigate("/cart");
@@ -166,19 +215,26 @@ const starStats = [5,4,3,2,1].map(star => {
                 {/* LEFT */}
                 <div className="detail-left">
                     <div className="main-image">
-                        <img src={selectedImage} alt={product.name} />
+                        {selectedImage && (
+ <img
+  src={selectedImage}
+  onError={(e) => (e.target.src = "/placeholder.png")}
+  alt={product.name}
+/>
+)}
                     </div>
-                    <div className="thumbnail-row">
-                        {[product.image, product.image, product.image].map((img, index) => (
-                            <img
-                                key={index}
-                                src={img}
-                                alt=""
-                                className={selectedImage === img ? "active" : ""}
-                                onClick={() => setSelectedImage(img)}
-                            />
-                        ))}
-                    </div>
+                        <div className="thumbnail-row">
+{product.images?.map((img, index) => (
+                                <img
+                                    key={index}
+                                    src={getImageUrl(img)}
+                                    onError={(e) => (e.target.src = "/placeholder.png")}
+                                    alt=""
+                                    className={selectedImage === img ? "active" : ""}
+                                    onClick={() => setSelectedImage(getImageUrl(img))}
+                                />
+                            ))}
+                        </div>
                     {/* ================= ĐÁNH GIÁ ================= */}
 <div style={{ marginTop: 40 }}>
 
@@ -208,12 +264,13 @@ const starStats = [5,4,3,2,1].map(star => {
     {/* 🔥 ẢNH */}
     <div style={{ display: "flex", gap: 10 }}>
       {r.images?.map((img, i) => (
-        <img
-          key={i}
-          src={`http://localhost:5000/uploads/${img}`}
-          style={{ width: 60 }}
-        />
-      ))}
+  <img
+    key={i}
+    src={getImageUrl(img)}
+    onError={(e) => (e.target.src = "/placeholder.png")}
+    style={{ width: 60 }}
+  />
+))}
     </div>
 
     <div style={{ fontSize: 12, color: "#999" }}>
@@ -261,8 +318,7 @@ const starStats = [5,4,3,2,1].map(star => {
                             ) : (
                                 <>
                                     <span className="price-label">Giá sản phẩm</span>
-
-                                    <span className="new-price">
+<span className="new-price">
                                         {product.originalPrice?.toLocaleString()}đ
                                     </span>
                                 </>
@@ -281,6 +337,7 @@ const starStats = [5,4,3,2,1].map(star => {
 </div>
 
                     <div className="button-group">
+                       
 
                         <button
                             className="installment"

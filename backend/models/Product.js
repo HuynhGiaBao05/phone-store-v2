@@ -1,104 +1,103 @@
 const mongoose = require("mongoose");
 
 const productSchema = new mongoose.Schema(
-  {
-    name: {
-      type: String,
-      required: true,
-      trim: true
-    },
+    {
+        name: {
+            type: String,
+            required: true,
+            trim: true
+        },
 
-    category: {
-      type: mongoose.Schema.Types.ObjectId,
-      ref: "Category",
-      required: true,
-    },
+        category: {
+            type: mongoose.Schema.Types.ObjectId,
+            ref: "Category",
+            required: true,
+        },
 
-    brand: {
-      type: mongoose.Schema.Types.ObjectId,
-      ref: "Brand",
-      required: true,
-    },
+        brand: {
+            type: mongoose.Schema.Types.ObjectId,
+            ref: "Brand",
+            required: true,
+        },
 
-    originalPrice: {
-      type: Number,
-      required: true,
-      min: 0
-    },
+        originalPrice: {
+            type: Number,
+            required: true,
+            min: 0
+        },
 
-    discount: {
-      type: Number,
-      default: 0,
-      min: 0,
-      max: 100 // 🔥 sửa luôn (bạn đang để 5)
-    },
+        discount: {
+            type: Number,
+            default: 0,
+            min: 0,
+            max: 100
+        },
 
-    stock: {
-      type: Number,
-      required: true,
-      default: 0,
-      min: 0
-    },
+        stock: {
+            type: Number,
+            required: true,
+            default: 0,
+            min: 0
+        },
 
-    description: {
-      type: String,
-      default: ""
-    },
+        description: {
+            type: String,
+            default: ""
+        },
 
-    promotion: {
-      type: String,
-      default: ""
-    },
+        promotion: {
+            type: String,
+            default: ""
+        },
 
-    promoEndDate: {
-      type: Date,
-      default: null
-    },
+        promoEndDate: {
+            type: Date,
+            default: null
+        },
 
-    image: {
-      type: [String],
-      default: null
-    },
+        // 🔥 FIX: đổi image -> images
+        images: {
+            type: [String],
+            default: []
+        },
 
-    // 🔥🔥🔥 FIX QUAN TRỌNG: reviews PHẢI NẰM TRONG SCHEMA
-    reviews: [
-  {
-    user: {
-      type: mongoose.Schema.Types.ObjectId,
-      ref: "User"
-    },
-    rating: {
-      type: Number,
-      required: true
-    },
-    comment: {
-      type: String,
-      default: ""
-    },
+        reviews: [
+            {
+                user: {
+                    type: mongoose.Schema.Types.ObjectId,
+                    ref: "User"
+                },
+                rating: {
+                    type: Number,
+                    required: true
+                },
+                comment: {
+                    type: String,
+                    default: ""
+                },
 
-    // 🔥 THÊM IMAGE REVIEW
-    images: [
-      {
-        type: String
-      }
-    ],
+                images: [
+                    {
+                        type: String
+                    }
+                ],
 
-    createdAt: {
-      type: Date,
-      default: Date.now
-    }
-  }
-]
-  },
-  { timestamps: true }
+                createdAt: {
+                    type: Date,
+                    default: Date.now
+                }
+            }
+        ]
+    },
+    { timestamps: true }
 );
 
 // =====================================================
 productSchema.pre("save", function (next) {
-  if (this.discount === 0) {
-    this.promoEndDate = null;
-  }
-  next();
+    if (this.discount === 0) {
+        this.promoEndDate = null;
+    }
+    next();
 });
 
-module.exports = mongoose.model("Product", productSchema);
+module.exports = mongoose.model("Product", productSchema)

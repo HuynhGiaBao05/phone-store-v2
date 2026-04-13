@@ -12,6 +12,20 @@ function ProductListPage({ type }) {
     const itemsPerPage = 20;
 
     const API_BASE = "http://localhost:5000";
+    const getImageUrl = (img) => {
+  if (!img) return "/placeholder.png";
+
+  if (Array.isArray(img)) {
+    if (img.length === 0) return "/placeholder.png";
+    img = img[0];
+  }
+
+  if (!img) return "/placeholder.png";
+
+  if (img.startsWith("http")) return img;
+
+  return `${API_BASE}/uploads/${img}`;
+};
 
     useEffect(() => {
         axios.get(`${API_BASE}/api/products`).then((res) => {
@@ -80,7 +94,11 @@ function ProductListPage({ type }) {
                             <span className="sale-badge">-{p.discount}%</span>
                         )}
 
-                        <img src={p.image} alt={p.name} />
+                      <img
+  src={getImageUrl(p.images)}
+  onError={(e) => (e.target.src = "/placeholder.png")}
+  alt={p.name}
+/>
                         <h3>{p.name}</h3>
 
                         <div className="price-box">

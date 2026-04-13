@@ -31,7 +31,12 @@ function StaffLayout({ children }) {
         >
           👥 Khách hàng
         </Link>
-
+<Link
+  to="/staff-banners"
+  className={location.pathname.includes("banners") ? "active" : ""}
+>
+  🎯 Banner
+</Link>
       </aside>
 
       <main className="staff-content">

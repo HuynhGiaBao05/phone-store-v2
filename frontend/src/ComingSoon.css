@@ -1,0 +1,98 @@
+.coming-container {
+  text-align: center;
+  padding: 60px 20px;
+  background: #f4f6f9;
+  min-height: 100vh;
+}
+
+.coming-title {
+  font-size: 32px;
+  font-weight: bold;
+  margin-bottom: 30px;
+}
+
+/* 🔥 Ảnh chính */
+.coming-main-img {
+  width: 520px;
+  max-width: 100%;
+  border-radius: 16px;
+  margin: 20px auto;
+  display: block;
+  box-shadow: 0 10px 30px rgba(0,0,0,0.15);
+  transition: transform 0.3s;
+}
+
+.coming-main-img:hover {
+  transform: scale(1.03);
+}
+
+/* 🔥 title sản phẩm */
+.coming-product-title {
+  font-size: 26px;
+  font-weight: 600;
+  margin-top: 20px;
+}
+
+/* 🔥 gallery ảnh nhỏ */
+.coming-gallery {
+  display: flex;
+  justify-content: center;
+  gap: 12px;
+  margin: 20px 0;
+  flex-wrap: wrap;
+}
+
+.coming-gallery img {
+  width: 120px;
+  border-radius: 10px;
+  transition: 0.3s;
+  cursor: pointer;
+}
+
+.coming-gallery img:hover {
+  transform: scale(1.1);
+}
+
+/* 🔥 mô tả */
+.coming-description {
+  max-width: 800px;
+  margin: 20px auto;
+  font-size: 15px;
+  color: #555;
+  line-height: 1.6;
+}
+
+/* 🔥 countdown */
+.coming-time {
+  font-size: 32px;
+  font-weight: 700;
+  background: linear-gradient(90deg, #ff4d4f, #ff9f1a);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  margin-top: 25px;
+    letter-spacing: 2px;
+      color: #ff3b30;
+
+
+}
+.coming-time {
+  animation: glow 1.5s infinite alternate;
+}
+
+@keyframes glow {
+  from {
+    opacity: 0.6;
+  }
+  to {
+    opacity: 1;
+  }
+}
+/* 🔥 card effect */
+.coming-card {
+  background: white;
+  padding: 30px;
+  border-radius: 20px;
+  max-width: 900px;
+  margin: auto;
+  box-shadow: 0 10px 40px rgba(0,0,0,0.08);
+}

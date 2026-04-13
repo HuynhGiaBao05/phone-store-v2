@@ -17,10 +17,11 @@ function AdminProducts() {
     const [showModal, setShowModal] = useState(false);
     const [editingProduct, setEditingProduct] = useState(null);
 
-    const [preview, setPreview] = useState(null);
+    const [preview, setPreview] = useState([]);
 
     const [currentPage, setCurrentPage] = useState(1);
     const productsPerPage = 5;
+    const [existingImages, setExistingImages] = useState([]);
 
     const [newProduct, setNewProduct] = useState({
         name: "",
@@ -32,7 +33,7 @@ function AdminProducts() {
         description: "",
         promotion: "",
         promoEndDate: "",
-        image: null
+        images: []
     });
 
     // ================= FETCH =================
@@ -51,7 +52,11 @@ function AdminProducts() {
         const res = await axios.get("http://localhost:5000/api/brands");
         setBrands(res.data);
     };
-
+useEffect(() => {
+  return () => {
+    preview.forEach(url => URL.revokeObjectURL(url));
+  };
+}, [preview]);
     useEffect(() => {
     const loadData = async () => {
         await fetchProducts();
@@ -98,8 +103,7 @@ function AdminProducts() {
     const indexOfFirst = indexOfLast - productsPerPage;
     const currentProducts = filteredProducts.slice(indexOfFirst, indexOfLast);
     const totalPages = Math.max(1, Math.ceil(filteredProducts.length / productsPerPage));
-
-    // ================= DELETE =================
+// ================= DELETE =================
 
     const handleDelete = async (id) => {
         if (!window.confirm("Bạn có chắc muốn xóa?")) return;
@@ -120,8 +124,20 @@ await axios.delete(`http://localhost:5000/api/products/${id}`, {
                 toast.error("Vui lòng nhập đầy đủ Tên, Danh mục và Thương hiệu!");
                 return;
             }
+         const formData = new FormData();
 
-            const formData = new FormData();
+if (!editingProduct && existingImages.length + newProduct.images.length < 3) {
+  toast.error("Phải chọn ít nhất 3 ảnh!");
+  return;
+}
+
+existingImages.forEach(img => {
+  const filename = img.includes("/uploads/")
+    ? img.split("/uploads/")[1]
+    : img;
+
+  formData.append("existingImages", filename);
+});
             formData.append("name", newProduct.name);
             formData.append("category", newProduct.category);
             formData.append("brand", newProduct.brand);
@@ -131,8 +147,11 @@ await axios.delete(`http://localhost:5000/api/products/${id}`, {
             formData.append("description", newProduct.description || "");
             formData.append("promotion", newProduct.promotion || "");
             if (newProduct.promoEndDate) formData.append("promoEndDate", newProduct.promoEndDate);
-            if (newProduct.image instanceof File) formData.append("image", newProduct.image);
-
+            newProduct.images.forEach(img => {
+    if (img instanceof File) {
+        formData.append("images", img); // 🔥 chỉ gửi file mới
+    }
+});
             if (editingProduct) {
                 await axios.put(
                     `http://localhost:5000/api/products/${editingProduct._id}`,
@@ -161,7 +180,18 @@ await axios.delete(`http://localhost:5000/api/products/${id}`, {
             setShowModal(false);
             setEditingProduct(null);
             fetchProducts();
-
+            setNewProduct({
+  name: "",
+  category: "",
+  brand: "",
+  originalPrice: "",
+  discount: "",
+  stock: "",
+  description: "",
+  promotion: "",
+  promoEndDate: "",
+  images: []
+});
         } catch (error) {
             console.log("🔥 ERROR:", error.response?.data || error);
             alert(error.response?.data?.message || "Lỗi khi lưu sản phẩm!");
@@ -170,13 +200,20 @@ await axios.delete(`http://localhost:5000/api/products/${id}`, {
 
     // ================= IMAGE =================
 
-    const handleImageChange = (e) => {
-        const file = e.target.files[0];
-        if (!file) return;
+   const handleImageChange = (e) => {
+  const files = Array.from(e.target.files);
 
-        setNewProduct({ ...newProduct, image: file });
-        setPreview(URL.createObjectURL(file));
-    };
+  // 🔥 chỉ append file mới
+  setNewProduct(prev => ({
+    ...prev,
+    images: [...prev.images, ...files]
+  }));
+
+    const newPreview = files.map(file => URL.createObjectURL(file));
+
+setPreview(prev => [...prev, ...newPreview]);
+
+};
 
     return (
         <div className="admin-products">
@@ -221,7 +258,7 @@ await axios.delete(`http://localhost:5000/api/products/${id}`, {
 
                 <button className="btn-primary" onClick={() => {
                     setEditingProduct(null);
-                    setPreview(null);
+                    setPreview([]);
                     setNewProduct({
                         name: "",
                         category: "",
@@ -232,8 +269,9 @@ await axios.delete(`http://localhost:5000/api/products/${id}`, {
                         description: "",
                         promotion: "",
                         promoEndDate: "",
-                        image: null
+                        images: []
                     });
+                    setExistingImages([]); 
                     setShowModal(true);
                 }}>
                     + Thêm sản phẩm
@@ -252,17 +290,23 @@ await axios.delete(`http://localhost:5000/api/products/${id}`, {
                             <th>Hành động</th>
                         </tr>
                     </thead>
-                    <tbody>
+<tbody>
                         {currentProducts.map((p) => {
+                            console.log("IMAGE:", p.images);
                             const finalPrice =
                                 p.discount > 0
                                     ? p.originalPrice * (1 - p.discount / 100)
                                     : p.originalPrice;
 
                             return (
-                                <tr key={p._id}>
-                                    <td><img src={p.image} className="product-img" alt="" /></td>
-                                    <td>{p.name}</td>
+                               <tr key={p._id}>
+  <td>
+    {p.images?.[0] && (
+  <img src={p.images[0]} className="product-img" alt="" />
+)}
+  </td>
+
+  <td>{p.name}</td>
 <td>
 {p.discount > 0 && (
                                             <span className="old-price">
@@ -280,9 +324,18 @@ await axios.delete(`http://localhost:5000/api/products/${id}`, {
                                     <td className="actions">
                                         <button className="btn-edit" onClick={() => {
                                             setEditingProduct(p);
-                                            setPreview(p.image || null);
-                                            setNewProduct({
-                                                name: p.name || "",
+                                            setExistingImages(p.images || []);
+
+                                    setPreview(
+                                    (p.images || []).map(img =>
+                                        img.startsWith("http")
+                                        ? img
+                                        : `http://localhost:5000/${img}`
+                                    )
+                                    );
+
+                                    setNewProduct({
+                                       name: p.name || "",
                                                 category:
                                             p.category && typeof p.category === "object"
                                                 ? p.category._id
@@ -299,9 +352,8 @@ await axios.delete(`http://localhost:5000/api/products/${id}`, {
                                                 promoEndDate: p.promoEndDate
                                                     ? p.promoEndDate.slice(0, 16)
                                                     : "",
-                                                image: null
-                                            });
-                                            setShowModal(true);
+                                                 images: []                                          });
+setShowModal(true);
                                         }}>
                                             Sửa
                                         </button>
@@ -363,7 +415,7 @@ onClick={() => setCurrentPage(currentPage + 1)}>→</button>
                                 >
                                     <option value="">Chọn thương hiệu</option>
                                     {brands.map((b) => (
-                                        <option key={b._id} value={b._id}>{b.name}</option>
+<option key={b._id} value={b._id}>{b.name}</option>
                                     ))}
                                 </select>
 
@@ -404,10 +456,31 @@ setNewProduct({ ...newProduct, discount: e.target.value })
                                     }
                                 />
 
-                                <div className="field-image">
-                                    <input type="file" onChange={handleImageChange} />
-                                    {preview && <img src={preview} className="preview-img" alt="" />}
-                                </div>
+                               <div className="field-image">
+  <input type="file" multiple onChange={handleImageChange} />
+
+  <div style={{ display: "flex", gap: 10 }}>
+    {preview.map((img, i) => (
+<div key={i} className="img-wrapper">
+  <img src={img} className="preview-img" />
+
+  <button
+    className="remove-btn"
+    onClick={() => {
+      setPreview(preview.filter((_, index) => index !== i));
+
+      setNewProduct(prev => ({
+        ...prev,
+        images: prev.images.filter((_, index) => index !== i)
+      }));
+    }}
+  >
+    ×
+  </button>
+</div>
+    ))}
+  </div>
+</div>
 
                             </div>
 
@@ -420,12 +493,13 @@ setNewProduct({ ...newProduct, discount: e.target.value })
                             />
 
                             <textarea
-                                placeholder="Nội dung khuyến mãi"
+placeholder="Nội dung khuyến mãi"
                                 value={newProduct.promotion}
                                 onChange={(e) =>
                                     setNewProduct({ ...newProduct, promotion: e.target.value })
                                 }
                             />
+
 
                             <div className="modal-actions">
                                 <button className="btn-primary" onClick={handleSave}>Lưu</button>

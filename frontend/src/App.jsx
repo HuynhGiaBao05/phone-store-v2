@@ -44,7 +44,9 @@ import ProductListPage from "./ProductListPage";
 import CustomerManagement from "./CustomerManagement";
 import AdminCustomerDetail from "./AdminCustomerDetail";
 import { useNavigate } from "react-router-dom";
-
+import PromoPage from "./PromoPage";
+import AdminBanner from "./AdminBanner";
+import ComingSoon from "./ComingSoon";
 
 
 function App() {
@@ -74,7 +76,8 @@ function App() {
         <Route path="/orders" element={<Orders />} />
         <Route path="/featured" element={<ProductListPage type="featured" />} />
 <Route path="/sale" element={<ProductListPage type="sale" />} />
-
+<Route path="/promo/:slug" element={<PromoPage />} />
+<Route path="/coming-soon" element={<ComingSoon />} />
         {/* 👉 Sau này bạn thêm category page, product detail page cũng để trong đây */}
 
       </Route>
@@ -173,6 +176,16 @@ function App() {
         }
       />
       <Route
+  path="/admin-banners"
+  element={
+    <ProtectedRoute allowedRoles={["ADMIN", "STAFF"]}>
+      <AdminLayout>
+        <AdminBanner />
+      </AdminLayout>
+    </ProtectedRoute>
+  }
+/>
+      <Route
   path="/admin-customers"
   element={
     <ProtectedRoute allowedRoles={["ADMIN", "STAFF"]}>
@@ -255,7 +268,16 @@ function App() {
     </ProtectedRoute>
   }
 />
-
+<Route
+  path="/staff-banners"
+  element={
+    <ProtectedRoute allowedRoles={["STAFF"]}>
+      <StaffLayout>
+        <AdminBanner />   {/* dùng chung component */}
+      </StaffLayout>
+    </ProtectedRoute>
+  }
+/>
         
 
     </Routes>

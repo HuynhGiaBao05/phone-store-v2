@@ -48,10 +48,8 @@ if (!emailRegex.test(email)) {
       // 🔥 MFA: nếu cần xác nhận email
 if (res.data.requireApproval) {
   toast.info("Vui lòng xác nhận đăng nhập qua email");
-  setLoading(false);
   navigate(`/mfa-wait?token=${res.data.loginToken}`);
   return;
-
 }
 
 // ✅ CHỈ LƯU TOKEN KHI CÓ TOKEN
@@ -78,6 +76,14 @@ const role = res.data.data?.user?.role?.toUpperCase();
       }
 
     } catch (error) {
+      // ✅ FIX: xử lý MFA đang chờ duyệt
+  if (error.response?.status === 429) {
+    toast.info("Vui lòng xác nhận đăng nhập qua email");  
+    setLoading(false);
+
+    navigate(`/mfa-wait?token=${error.response?.data?.loginToken}`); // hoặc token nếu bạn có
+    return;
+  }
   const type = error.response?.data?.type;
 
   switch (type) {

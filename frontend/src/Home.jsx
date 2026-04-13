@@ -9,6 +9,8 @@ import { formatMoney } from "./utils/formatMoney";
 import { useState, useEffect } from "react";
 import axios from "axios";
 import { toast } from "react-toastify";
+import { useNavigate } from "react-router-dom";
+
 
 function Home() {
   const [featuredProducts, setFeaturedProducts] = useState([]);
@@ -16,7 +18,17 @@ function Home() {
   const [categoryProducts, setCategoryProducts] = useState({});
   const [showSearch, setShowSearch] = useState(false);
   const [saleProducts, setSaleProducts] = useState([]);
+  const [banners, setBanners] = useState([]);
+const navigate = useNavigate();
+// ================= GET BANNERS =================
+useEffect(() => {
+  axios
+    .get("http://localhost:5000/api/banners")
+    .then((res) => setBanners(res.data))
+    .catch((err) => console.log(err));
+}, []);
   // ================= GET CATEGORIES =================
+
   useEffect(() => {
     axios
       .get("http://localhost:5000/api/categories")
@@ -61,19 +73,27 @@ function Home() {
     });
   }, [categories]);
 
-  const heroSlides = ["slide1.png", "slide2.png", "slide3.png","slide4.png","slide5.png","slide6.png","slide7.png","slide8.png"];
+  
 
   const API_BASE = "http://localhost:5000";
 
 const getImageUrl = (img) => {
   if (!img) return "/placeholder.png";
 
-  // 🔥 FIX ARRAY
+  // 🔥 nếu là array
   if (Array.isArray(img)) {
+    if (img.length === 0) return "/placeholder.png";
     img = img[0];
   }
 
-  if (img.startsWith("http")) return img;
+  // 🔥 nếu vẫn undefined/null
+  if (!img) return "/placeholder.png";
+
+  // 🔥 nếu không phải string
+  if (typeof img !== "string") return "/placeholder.png";
+
+  // 🔥 nếu là URL
+ if (typeof img === "string" && img.startsWith("http")) return img;
 
   return `${API_BASE}/uploads/${img}`;
 };
@@ -83,20 +103,63 @@ const getImageUrl = (img) => {
 
       {/* ================= HERO ================= */}
       <section className="hero">
-        <Swiper
-          modules={[Navigation, Pagination, Autoplay]}
-          navigation
-          pagination={{ clickable: true }}
-          autoplay={{ delay: 1500 }}
-          loop
-        >
-          {heroSlides.map((img, index) => (
-            <SwiperSlide key={index}>
-              <img src={img} alt="banner" />
-            </SwiperSlide>
-          ))}
-        </Swiper>
-      </section>
+  <Swiper
+    modules={[Navigation, Pagination, Autoplay]}
+    navigation
+    pagination={{ clickable: true }}
+    autoplay={{ delay: 1500 }}
+    loop={banners.length > 1}
+  >
+    {banners
+  .filter(b => b.image || b.images)
+  .map((banner) => {
+ if (!banner.image && !banner.images) return null;
+
+  return (
+    <SwiperSlide key={banner._id}>
+      <div
+        className="banner-wrapper"
+  onClick={(e) => {
+  e.stopPropagation();
+
+ const productId =
+  banner.productId && typeof banner.productId === "object"
+    ? banner.productId._id
+    : banner.productId;
+
+  // 🟢 1. PRODUCT → vào sản phẩm
+  if (banner.type === "PRODUCT" && productId) {
+    navigate(`/product/${productId}`);
+  }
+
+  // 🚀 2. COMING SOON → vào trang riêng
+  else if (banner.type === "COMING_SOON") {
+    navigate("/coming-soon", {
+      state: { banner } 
+    });
+  }
+
+  // 🔥 3. PROMO → mở link ngoài
+  else if (banner.type === "PROMO" && banner.link) {
+    window.open(banner.link, "_blank"); // 🔥 FIX CHUẨN
+  }
+
+  else {
+    console.log("❌ Banner lỗi:", banner);
+  }
+}}
+      >
+       <img
+  src={getImageUrl(banner.image || banner.images)}
+  onError={(e) => (e.target.src = "/placeholder.png")}
+  alt={banner.title}
+/>
+      </div>
+    </SwiperSlide>
+  );
+})}
+  </Swiper>
+</section>
 
       {/* ================= FEATURED ================= */}
       <section className="category-section">
@@ -121,42 +184,31 @@ const getImageUrl = (img) => {
             0: { slidesPerView: 1 },
         }}
 >
-          {featuredProducts.map((item) => (
-            <SwiperSlide key={item._id}>
-              <Link to={`/product/${item._id}`} className="product-card">
+         {featuredProducts.map((item) => {
+          console.log("FEATURED:", item);
 
-                {item.discount > 0 && (
-                  <span className="sale-badge">
-                    -{item.discount}%
-                  </span>
-                )}
+  return (
+    <SwiperSlide key={item._id}>
+      <Link to={`/product/${item._id}`} className="product-card">
 
-                <img src={getImageUrl(item.image)} alt={item.name} />
-                <h3>{item.name}</h3>
+        {item.discount > 0 && (
+          <span className="sale-badge">
+            -{item.discount}%
+          </span>
+        )}
 
-               <div className="price-box">
-                <span className="new-price">
-                  {formatMoney(item.price)} đ
-                </span>
+        <img
+  src={getImageUrl(item.images)}
+  onError={(e) => (e.target.src = "/placeholder.png")}
+  alt={item.name}
+/>
 
-                <div className="old-price-wrapper">
-                  {item.discount > 0 ? (
-                    <>
-                      <span className="old-price">
-                        {formatMoney(item.originalPrice)} đ
-                      </span>
-                      <span className="discount">
-                        -{item.discount}%
-                      </span>
-                    </>
-                  ) : (
-                    <span className="no-discount"></span>
-                  )}
-                </div>
-              </div>
-              </Link>
-            </SwiperSlide>
-          ))}
+        <h3>{item.name}</h3>
+
+      </Link>
+    </SwiperSlide>
+  );
+})}
         </Swiper>
       </section>
 
@@ -186,7 +238,11 @@ const getImageUrl = (img) => {
                 <Link to={`/product/${item._id}`} className="product-card">
                     <span className="sale-badge">-{item.discount}%</span>
 
-                    <img src={getImageUrl(item.image)} alt={item.name} />
+               <img
+  src={getImageUrl(item.images)}
+  onError={(e) => (e.target.src = "/placeholder.png")}
+  alt={item.name}
+/>
                     <h3>{item.name}</h3>
 
                     <div className="price-box">
@@ -247,7 +303,11 @@ const getImageUrl = (img) => {
                       </span>
                     )}
 
-                    <img src={getImageUrl(p.image)} alt={p.name} />
+             <img
+  src={getImageUrl(p.images)}
+  onError={(e) => (e.target.src = "/placeholder.png")}
+  alt={p.name}
+/>
                     <h3>{p.name}</h3>
 
                     <div className="price-box">

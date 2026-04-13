@@ -6,6 +6,8 @@ import { toast } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
 import { ToastContainer } from "react-toastify";
 import { useRef } from "react";
+import { useLocation } from "react-router-dom";
+
 
 function LoginUser() {
   const [isActive, setIsActive] = useState(false);
@@ -17,7 +19,8 @@ function LoginUser() {
   const [emailError, setEmailError] = useState("");
 const [passwordError, setPasswordError] = useState("");
 const [showLoginPassword, setShowLoginPassword] = useState(false);
-
+const location = useLocation();
+const from = location.state?.from || "/";
 //lock
 const [isLocked, setIsLocked] = useState(false);
 
@@ -130,7 +133,7 @@ if (redirect) {
   navigate(redirect); // 🔥 quay lại trang cũ
 
 } else {
-  navigate("/"); // fallback
+  navigate(from, { replace: true }); // fallback
 }
 setLoginEmail("");
 setLoginPassword("");

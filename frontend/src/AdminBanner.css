@@ -1,0 +1,181 @@
+.banner-container {
+  padding: 30px;
+}
+
+/* ===== FORM ===== */
+.banner-form {
+  display: flex;
+  gap: 12px;
+  flex-wrap: wrap;
+  align-items: center;
+  background: #fff;
+  padding: 16px;
+  border-radius: 12px;
+  box-shadow: 0 6px 20px rgba(0,0,0,0.05);
+  margin-bottom: 20px;
+}
+
+.banner-form input,
+.banner-form select {
+  padding: 10px 12px;
+  border: 1px solid #ddd;
+  border-radius: 8px;
+  outline: none;
+  transition: 0.2s;
+}
+
+.banner-form input:focus,
+.banner-form select:focus {
+  border-color: #2563eb;
+}
+
+/* BUTTON */
+.banner-form button {
+  background: #2563eb;
+  color: white;
+  padding: 10px 18px;
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+  font-weight: 600;
+}
+
+.banner-form button:hover {
+  background: #1d4ed8;
+}
+
+/* PREVIEW */
+.banner-preview img {
+  width: 120px;
+  height: 70px;
+  object-fit: cover;
+  border-radius: 8px;
+}
+
+/* ===== SEARCH ===== */
+.search-box {
+  position: relative;
+  width: 250px;
+}
+
+.search-input {
+  width: 100%;
+}
+
+.search-dropdown {
+  position: absolute;
+  top: 105%;
+  left: 0;
+  right: 0;
+  background: white;
+  border-radius: 10px;
+  border: 1px solid #ddd;
+  max-height: 200px;
+  overflow-y: auto;
+  z-index: 999;
+  box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+}
+
+.dropdown-item {
+  padding: 10px;
+  cursor: pointer;
+}
+
+.dropdown-item:hover {
+  background: #f3f4f6;
+}
+
+/* ===== LIST ===== */
+.banner-list {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+/* CARD */
+.banner-item {
+  display: flex;
+  align-items: center;
+  gap: 20px;
+  padding: 14px;
+  border-radius: 12px;
+  background: white;
+  box-shadow: 0 6px 20px rgba(0,0,0,0.05);
+  justify-content: space-between;
+  transition: 0.25s;
+}
+
+.banner-item:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 12px 30px rgba(0,0,0,0.08);
+}
+
+/* IMAGE */
+.banner-item img {
+  width: 160px;
+  height: 90px;
+  object-fit: cover;
+  border-radius: 8px;
+}
+
+/* INFO */
+.banner-info {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.banner-title {
+  font-size: 16px;
+  font-weight: 600;
+}
+
+/* BADGE */
+.badge {
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.badge.product {
+  color: green;
+}
+
+.badge.promo {
+  color: orange;
+}
+
+.badge.coming_soon {
+  color: purple;
+}
+
+/* ACTION */
+.banner-actions {
+  display: flex;
+  gap: 8px;
+}
+
+.banner-actions button {
+  padding: 6px 12px;
+  border-radius: 8px;
+  border: none;
+  cursor: pointer;
+}
+
+.btn-delete {
+  background: #ef4444;
+  color: white;
+}
+
+.btn-delete:hover {
+  background: #dc2626;
+}
+
+.btn-active {
+  background: #22c55e;
+  color: white;
+}
+
+.btn-active:hover {
+  background: #16a34a;
+}

@@ -649,9 +649,9 @@ router.get("/top-products-home", async (req, res) => {
   name: product.name,
 
   // ✅ FIX Ở ĐÂY
-  image: Array.isArray(product.image)
-    ? `http://localhost:5000/uploads/${product.image[0]}`
-    : `http://localhost:5000/uploads/${product.image}`,
+images: product.images?.map(img => 
+  `http://localhost:5000/uploads/${img}`
+),
 
   price: finalPrice,
   discount: product.discount,

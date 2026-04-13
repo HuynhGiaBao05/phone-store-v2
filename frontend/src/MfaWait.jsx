@@ -24,6 +24,7 @@ function MfaWait() {
   }, 5 * 60 * 1000);
 
   const interval = setInterval(async () => {
+    if (document.hidden) return;
     try {
       const res = await axios.get(
         `http://localhost:5000/api/users/check-login-approved-token/${token}`
@@ -34,7 +35,7 @@ if (res.data.approved) {
   clearInterval(interval);
   clearTimeout(timeout);
 
-  toast.success("Xác thực thành công ✅");
+  toast.success("Xác thực thành công ✅", { autoClose: 1000 });
 
   localStorage.setItem("adminToken", res.data.token);
   localStorage.setItem("adminRole", res.data.role);
@@ -80,7 +81,7 @@ if (res.data.denied) {
 
   console.error(err);
 }
-  }, 3000);
+  }, 2000);
 
   return () => {
     clearInterval(interval);

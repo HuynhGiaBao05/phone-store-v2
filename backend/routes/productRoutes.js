@@ -58,19 +58,15 @@ async function calculateProductPrice(product) {
     }
   }
 
-  return {
-    ...product.toObject(),
-    price: finalPrice,
-    discount: activeDiscount,
-    isExpiringSoon, // 🔥 TRẢ VỀ CHO FRONTEND
-   image: product.image
-  ? `http://localhost:5000/uploads/${
-      Array.isArray(product.image)
-        ? product.image[0]
-        : product.image
-    }`
-  : null,
-  };
+    return {
+        ...product.toObject(),
+        price: finalPrice,
+        discount: activeDiscount,
+        isExpiringSoon,
+        images: product.images
+            ? product.images.map(img => `http://localhost:5000/uploads/${img}`)
+            : [],
+    };
 }
 
 // =====================================================
@@ -80,7 +76,7 @@ router.post(
   "/create",
   protect,
   authorizeRoles("ADMIN", "STAFF"),
-  upload.single("image"),
+  upload.array("images", 10),
   async (req, res) => {
     try {
 
@@ -100,11 +96,10 @@ router.post(
         stock: req.body.stock,
         description: req.body.description,
         promotion: req.body.promotion,
-
-        // 🔥 CHỈ LƯU promoEndDate NẾU discount > 0
+// 🔥 CHỈ LƯU promoEndDate NẾU discount > 0
         promoEndDate: discount > 0 ? req.body.promoEndDate : null,
 
-        image: req.file ? req.file.filename : null,
+          images: req.files ? req.files.map(file => file.filename) : [],
       });
 
       await product.save();
@@ -200,7 +195,7 @@ router.put(
   "/:id",
   protect,
   authorizeRoles("ADMIN", "STAFF"),
-  upload.single("image"),
+    upload.array("images", 10),
   async (req, res) => {
     try {
 
@@ -209,45 +204,26 @@ router.put(
         return res.status(404).json({ message: "Product not found" });
       }
 
-      // ===== UPDATE GIÁ =====
-      if (req.body.originalPrice !== undefined) {
+        // ===== UPDATE FIELD =====
+        product.name = req.body.name ?? product.name;
+        product.stock = req.body.stock ?? product.stock;
+product.description = req.body.description ?? product.description;
+        product.promotion = req.body.promotion ?? product.promotion;
+        product.category = req.body.category ?? product.category;
+        product.brand = req.body.brand ?? product.brand;
 
-        const originalPrice = Number(req.body.originalPrice);
-        const discount = Math.max(0, Math.min(100, Number(req.body.discount) || 0));
+        // ===== UPDATE ẢNH =====
+if (req.files && req.files.length > 0) {
 
-        if (!originalPrice || originalPrice <= 0) {
-          return res.status(400).json({ message: "Giá gốc phải lớn hơn 0" });
+    // 🔥 KHÔNG XÓA ẢNH CŨ
+
+    // 🔥 GỘP ẢNH CŨ + ẢNH MỚI
+    product.images = [
+        ...(product.images || []),
+        ...req.files.map(file => file.filename)
+    ];
+
         }
-
-        product.originalPrice = originalPrice;
-        product.discount = discount;
-
-        // 🔥 RESET promoEndDate nếu discount = 0
-        product.promoEndDate = discount > 0
-          ? req.body.promoEndDate || null
-          : null;
-      }
-
-      // ===== UPDATE FIELD KHÁC =====
-      product.name = req.body.name || product.name;
-      product.stock = req.body.stock || product.stock;
-      product.description = req.body.description || product.description;
-      product.promotion = req.body.promotion || product.promotion;
-      product.category = req.body.category || product.category;
-      product.brand = req.body.brand || product.brand;
-
-      // ===== UPDATE ẢNH =====
-      if (req.file) {
-
-        if (product.image) {
-          const oldImagePath = path.join(__dirname, "../uploads", product.image);
-          if (fs.existsSync(oldImagePath)) {
-            fs.unlinkSync(oldImagePath);
-          }
-        }
-
-          product.image = req.file.filename; // ✅ đúng với single
-      }
 
       await product.save();
 
@@ -269,40 +245,40 @@ await ActivityLog.create({
 // =====================================================
 // DELETE PRODUCT
 // =====================================================
-router.delete(
-  "/:id",
-  protect,
-  authorizeRoles("ADMIN", "STAFF"),
-  async (req, res) => {
-    console.log("USER:", req.user);
-      console.log("PARAM ID:", req.params.id);
+    router.delete(
+      "/:id",
+      protect,
+      authorizeRoles("ADMIN", "STAFF"),
+      async (req, res) => {
+        console.log("USER:", req.user);
+          console.log("PARAM ID:", req.params.id);
 
-    try {
+        try {
 
-      const product = await Product.findById(req.params.id);
-      if (!product) {
-        return res.status(404).json({ message: "Product not found" });
-      }
-if (!req.user) {
-  return res.status(401).json({ message: "Unauthorized" });
-}
-      if (product.image) {
-  try {
-    const imagePath = path.join(__dirname, "../uploads", product.image);
-
-    if (fs.existsSync(imagePath)) {
-      fs.unlinkSync(imagePath);
-    } else {
-      console.log("⚠️ File not found:", imagePath);
+          const product = await Product.findById(req.params.id);
+          if (!product) {
+            return res.status(404).json({ message: "Product not found" });
+          }
+    if (!req.user) {
+      return res.status(401).json({ message: "Unauthorized" });
     }
+            if (req.files && req.files.length > 0) {
+                try {
+                    product.images.forEach(img => {
+                        const imagePath = path.join(__dirname, "../uploads", img);
 
-  } catch (err) {
-    console.log("⚠️ Delete image error:", err.message);
-  }
+                        if (fs.existsSync(imagePath)) {
+                            fs.unlinkSync(imagePath);
+                        } else {
+                            console.log("⚠️ File not found:", imagePath);
+                        }
+                    });
+                } catch (err) {
+                    console.log("⚠️ Delete image error:", err.message);
+                }
+            }
 
-}
-
-      await Product.findByIdAndDelete(req.params.id);
+          await Product.findByIdAndDelete(req.params.id);
 
 // 📝 ACTIVITY LOG: delete sản phẩm
 //await ActivityLog.create({

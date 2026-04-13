@@ -12,7 +12,12 @@ const rateLimit = require("express-rate-limit");
 
 // 🛡️ BRUTE FORCE PROTECTION: limit login attempts
 const isDev = process.env.NODE_ENV !== "production";
-
+app.use(
+  cors({
+    origin: "http://localhost:5173",
+    credentials: true,
+  })
+);
 const loginLimiter = rateLimit({
   windowMs: 60 * 1000, // 60 giây
    max: isDev ? 100 : 5,
@@ -29,6 +34,7 @@ const otpLimiter = rateLimit({
     message: "Gửi OTP quá nhiều, thử lại sau"
   }
 });
+app.use("/api/banners", require("./routes/bannerRoutes"));
 
 // 🛡️ SECURITY FIRST
 app.use(
@@ -48,13 +54,6 @@ app.use(helmet.crossOriginResourcePolicy({ policy: "cross-origin" }));
 
 // 🛡️ TRUST PROXY (PHẢI ĐỂ SỚM)
 
-// 🌐 CORS
-app.use(
-  cors({
-    origin: "http://localhost:5173",
-    credentials: true,
-  })
-);
 
 // 🛡️ BODY
 app.use(express.json({ limit: "10kb" }));
